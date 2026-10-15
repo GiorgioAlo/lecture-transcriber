@@ -1,0 +1,12 @@
+# Dipendenze per il build macOS su GitHub Actions.
+# Versioni allineate a quelle collaudate in sviluppo su Windows (pip freeze).
+# pywebview su macOS tira dietro da solo i pacchetti pyobjc necessari per la
+# WebView integrata (WKWebView) — non li elenchiamo per non vincolarci a
+# versioni che potrebbero non avere il wheel giusto sul runner.
+pywebview==6.2.1
+google-genai==2.25.0
+keyring==25.7.0
+pyinstaller==6.22.3
+pyinstaller-hooks-contrib==2026.8
+# Serve solo a (ri)generare l'icona in CI (make_icon.py).
+pillow

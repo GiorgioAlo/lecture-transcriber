@@ -1,0 +1,108 @@
+name: Build macOS
+
+# Costruisce la versione Mac dell'app (un .dmg) su un Mac "in cloud" offerto da
+# GitHub, perche' da Windows non si puo' compilare per macOS.
+#
+# Parte in due modi:
+#  - a mano, dal tab "Actions" -> "Build macOS" -> "Run workflow" (serve per le prove);
+#  - da sola, quando pubblichi una Release (allega il .dmg alla stessa Release).
+#
+# Strategia: build x86_64 (runner Intel macos-13). Il .dmg risultante gira su TUTTI
+# i Mac: nativo sugli Intel, tramite Rosetta sui Mac Apple Silicon (1 click la 1a volta).
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag della Release su cui caricare il .dmg (es. v1.1.0)"
+        required: true
+  release:
+    types: [published]
+
+permissions:
+  contents: write        # per allegare il .dmg come asset della Release
+
+jobs:
+  build:
+    runs-on: macos-13    # runner Intel (x86_64); gira anche su Apple Silicon via Rosetta
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installa le dipendenze
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-macos.txt
+
+      - name: Scarica i binari macOS (ffmpeg, ffprobe, yt-dlp)
+        run: |
+          mkdir -p packaging/bin-macos
+          curl -fSL -o /tmp/ffmpeg.zip  https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip
+          curl -fSL -o /tmp/ffprobe.zip https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip
+          unzip -o /tmp/ffmpeg.zip  -d packaging/bin-macos
+          unzip -o /tmp/ffprobe.zip -d packaging/bin-macos
+          curl -fSL -o packaging/bin-macos/yt-dlp \
+            https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos
+          chmod +x packaging/bin-macos/ffmpeg packaging/bin-macos/ffprobe packaging/bin-macos/yt-dlp
+          ls -la packaging/bin-macos
+
+      - name: Genera l'icona (.icns)
+        run: |
+          python packaging/make_icon.py          # crea packaging/icon.png (1024x1024)
+          mkdir -p /tmp/icon.iconset
+          sips -z 16 16   packaging/icon.png --out /tmp/icon.iconset/icon_16x16.png
+          sips -z 32 32   packaging/icon.png --out /tmp/icon.iconset/icon_16x16@2x.png
+          sips -z 32 32   packaging/icon.png --out /tmp/icon.iconset/icon_32x32.png
+          sips -z 64 64   packaging/icon.png --out /tmp/icon.iconset/icon_32x32@2x.png
+          sips -z 128 128 packaging/icon.png --out /tmp/icon.iconset/icon_128x128.png
+          sips -z 256 256 packaging/icon.png --out /tmp/icon.iconset/icon_128x128@2x.png
+          sips -z 256 256 packaging/icon.png --out /tmp/icon.iconset/icon_256x256.png
+          sips -z 512 512 packaging/icon.png --out /tmp/icon.iconset/icon_256x256@2x.png
+          sips -z 512 512 packaging/icon.png --out /tmp/icon.iconset/icon_512x512.png
+          cp packaging/icon.png /tmp/icon.iconset/icon_512x512@2x.png
+          iconutil -c icns /tmp/icon.iconset -o packaging/icon.icns
+
+      - name: Costruisci il .app (PyInstaller)
+        run: |
+          python -m PyInstaller packaging/app_mac.spec \
+            --distpath packaging/dist-macos \
+            --workpath packaging/build-macos \
+            --noconfirm
+
+      - name: Firma ad-hoc (gratis, non e' notarizzazione)
+        run: |
+          codesign --force --deep --sign - "packaging/dist-macos/Trascrivi Lezioni.app"
+          codesign --verify --deep --strict --verbose=2 "packaging/dist-macos/Trascrivi Lezioni.app" || true
+
+      - name: Crea il .dmg
+        run: |
+          mkdir -p /tmp/dmgroot
+          cp -R "packaging/dist-macos/Trascrivi Lezioni.app" /tmp/dmgroot/
+          ln -s /Applications /tmp/dmgroot/Applications
+          hdiutil create -volname "Trascrivi Lezioni" \
+            -srcfolder /tmp/dmgroot -ov -format UDZO \
+            "Trascrivi-Lezioni-macOS.dmg"
+
+      - name: Salva il .dmg come artifact del run (per i test)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Trascrivi-Lezioni-macOS
+          path: Trascrivi-Lezioni-macOS.dmg
+
+      - name: Ricava il tag della Release
+        id: tag
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          if [ -z "$TAG" ]; then TAG="${{ github.event.inputs.tag }}"; fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Allega il .dmg alla Release
+        if: steps.tag.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ steps.tag.outputs.tag }}" "Trascrivi-Lezioni-macOS.dmg" --clobber

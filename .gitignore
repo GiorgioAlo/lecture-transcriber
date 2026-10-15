@@ -1,0 +1,47 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# --- Dati di lavoro dell'app (rigenerabili, non vanno nel repo) ---
+cache/
+debug_coda.log
+aggiornamenti.json
+.quota.json
+
+# --- Output del build (si rigenerano; alcuni file sono enormi) ---
+packaging/dist/
+packaging/dist-macos/
+packaging/build/
+packaging/build-macos/
+# Binari pesanti: NON in git (ffmpeg.exe ~105 MB supera il limite GitHub di 100 MB).
+# Su Windows stanno in locale; per il Mac li scarica la CI.
+packaging/bin/
+packaging/bin-macos/
+packaging/icon.icns        # generata in CI dall'icona
+
+# --- Materiale di test (grande, PERSONALE: lezioni reali con nomi di persone) ---
+# Pattern largo: prende "lezioni da testare", "lezioni da testare 2", ecc.
+lezioni da testare*/
+# Nessun file multimediale deve finire nel repo (privacy + dimensioni).
+*.mp4
+*.m4a
+*.mp3
+*.wav
+*.aac
+*.ogg
+*.flac
+*.mkv
+*.mov
+*.webm
+*.docx
+
+# --- Note interne di sviluppo (restano solo in locale) ---
+STATO.md
+
+# --- Varie ---
+scratchpad/
+.DS_Store
+Thumbs.db
