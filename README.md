@@ -1,6 +1,10 @@
 # lecture-transcriber
 Automatic lecture transcription app turning audio/video and links (YouTube/Webex) into formatted documents using Google Gemini.
 
+## Command-line version
+Prefer the terminal (or running on Linux/servers)? There's a no-GUI `transcribe`
+command — see [`CLI.md`](CLI.md) for install and usage.
+
 ## Privacy & responsible use
 - **Your audio and the resulting transcripts are sent to Google Gemini** for
   processing — the content leaves your computer and is handled by Google under
