@@ -1,6 +1,14 @@
 # lecture-transcriber
 Automatic lecture transcription app turning audio/video and links (YouTube/Webex) into formatted documents using Google Gemini.
 
+## Run in Google Colab (no install)
+The easiest way to use it: run it in the cloud, nothing to install.
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/GiorgioAlo/lecture-transcriber/blob/main/notebooks/Trascrivi_Lezioni_Colab.ipynb)
+
+Open the notebook, add your Gemini key as a Colab *Secret*, upload your lectures
+(or paste links), and run the cells. The first cell is a step-by-step tutorial.
+
 ## Command-line version
 Prefer the terminal (or running on Linux/servers)? There's a no-GUI `transcribe`
 command — see [`CLI.md`](CLI.md) for install and usage.
