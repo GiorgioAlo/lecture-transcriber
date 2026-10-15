@@ -35,39 +35,55 @@ If you don't set it, `transcribe` asks for it at the prompt (input is hidden).
 
 ## Usage
 
+You give `transcribe` **one or more lectures**. Each lecture is either:
+- a **file path** on your computer (mp4, m4a, mp3, wav, mkv, …), or
+- a **link** to download (YouTube / Webex).
+
+You can mix files and links freely; they are processed one after another and all
+the Word documents go into the same `--out` folder. Put each path/link in
+**double quotes** if it contains spaces.
+
 ```bash
-# local file
-transcribe lecture.mp4 --languages it en --out ./Documents
+# one local file
+transcribe "C:\Users\me\Downloads\Lecture 1.mp4" --out "C:\Users\me\Desktop\Transcriptions"
 
-# YouTube link
-transcribe "https://www.youtube.com/watch?v=XXXX" --out ./Documents
+# one YouTube link
+transcribe "https://www.youtube.com/watch?v=XXXX" --out "C:\Users\me\Desktop\Transcriptions"
 
-# Webex link (needs a cookies file, see below)
-transcribe "https://org.webex.com/recordingservice/..." --cookies cookies.txt --out ./Documents
+# SEVERAL lectures at once (files and links mixed)
+transcribe "https://polimi.webex.com/..." "C:\Lectures\Zanero 1.mp4" "C:\Lectures\Zanero 2.mp4" --cookies "C:\Users\me\Downloads\cookies.txt" --out "C:\Users\me\Desktop\Transcriptions"
+
+# choose output languages (default is Italian + English)
+transcribe lecture.mp4 --languages it en fr --out ./transcriptions
 
 # quick test: only 5 minutes starting at minute 10
 transcribe lecture.mp4 --start 10 --minutes 5
 
-# use an existing transcript, just clean + translate
+# use an existing transcript, just clean + translate (one lecture only)
 transcribe --text transcript.txt --name Zanero --languages it
 ```
 
-The first positional argument can be **either a file or a link** (auto-detected).
+On macOS/Linux a path looks like `/home/me/Lectures/lecture.mp4` or
+`~/Lectures/lecture.mp4`, and an output folder like `--out ~/Transcriptions`.
+The output folder is **created automatically** if it doesn't exist.
 
 ### Options
 
 | Option | Meaning |
 |--------|---------|
-| `source` | lecture file (mp4, m4a, …) **or** a link (YouTube/Webex) |
-| `--text FILE` | use an existing `.txt` transcript (skip transcription) |
-| `--name NAME` | lecture name (default: file name) |
+| `SOURCE …` | one or more lectures; each is a **file path** or a **link** (YouTube/Webex) |
+| `--text FILE` | use an existing `.txt` transcript (skip transcription; one lecture only) |
+| `--name NAME` | lecture name (single lecture only; default: file name) |
 | `--languages L …` | output languages, e.g. `it en` (default: `it en`) |
 | `--course "…"` | course name (helps cleanup/translation) |
-| `--cookies FILE` | `cookies.txt` for authenticated links (Webex) |
-| `--password PW` | video password (some Webex recordings) |
-| `--out DIR` | folder where the Word files are saved |
-| `--start MIN` / `--minutes MIN` | transcribe only a clip |
+| `--cookies FILE` | `cookies.txt` for authenticated links (Webex); applies to all links |
+| `--password PW` | video password (some Webex recordings); applies to all links |
+| `--out DIR` | folder where the Word files are saved (created if missing) |
+| `--start MIN` / `--minutes MIN` | transcribe only a clip (applies to all) |
 | `--redo` | redo all phases even if already cached |
+
+If one lecture in a batch fails, `transcribe` reports it and **keeps going** with
+the next ones; at the end it prints how many completed.
 
 ## Cookies (Webex)
 
