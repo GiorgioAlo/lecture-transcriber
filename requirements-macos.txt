@@ -6,6 +6,7 @@
 pywebview==6.2.1
 google-genai==2.25.0
 keyring==25.7.0
+python-docx==1.2.0       # modulo 'docx': genera i file Word (tira dietro lxml)
 pyinstaller==6.22.3
 pyinstaller-hooks-contrib==2026.8
 # Serve solo a (ri)generare l'icona in CI (make_icon.py).
