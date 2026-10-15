@@ -8,34 +8,39 @@ Gemello di app.spec (Windows), adattato al Mac:
     scaricati dal workflow GitHub Actions (NON versionati nel repo);
   - keyring usa il Portachiavi di macOS (hiddenimport diverso da Windows).
 
-Architettura: x86_64 (host del runner Intel macos-13). Gira anche su Apple
-Silicon tramite Rosetta. In futuro si puo' passare a universal2 (serve Python
-universal2 + binari fusi con lipo).
+Architettura: arm64 (Apple Silicon), host del runner macos-14. Scelta "Strada 1":
+copre tutti i Mac recenti (dal 2020). I Mac Intel vecchi NON sono coperti (si
+potra' aggiungere in futuro un build universal2). macos-13 (Intel) e' stato
+scartato: a meta' 2025 i suoi runner spesso non prendono i job (restano in coda).
 
 Risorse impacchettate (coerenti con come il codice le cerca via sys._MEIPASS):
   - ui/                    -> _MEIPASS/ui/   (percorsi.risorsa)
   - ffmpeg / ffprobe       -> _MEIPASS/      (audio._trova guarda in _MEIPASS)
   - yt-dlp                 -> _MEIPASS/      (download._ytdlp_binario lo copia in ~/Library/...)
-I binari sono messi tra i 'datas' (blob opachi, cosi' PyInstaller non prova ad
-analizzare il mach-o statico/standalone); il codice garantisce il bit +x a
+ffmpeg/ffprobe vengono da Homebrew (dinamici): stanno tra i 'binaries' cosi'
+PyInstaller analizza il mach-o e impacchetta anche le librerie (.dylib) che
+servono. yt-dlp e' uno standalone opaco -> 'datas', col bit +x garantito a
 runtime (percorsi.assicura_eseguibile).
 """
 import sys
 from pathlib import Path
 
 ROOT = Path(SPECPATH).parent            # C:\whisper_test / radice repo
-BINM = Path(SPECPATH) / "bin-macos"     # ffmpeg/ffprobe/yt-dlp (macOS), scaricati in CI
+BINM = Path(SPECPATH) / "bin-macos"     # ffmpeg/ffprobe/yt-dlp (macOS), preparati in CI
 ICNS = str(Path(SPECPATH) / "icon.icns")
 
 # Versione dall'unica fonte di verita' (config.py), per l'Info.plist.
 sys.path.insert(0, str(ROOT))
 from trascrittore import config  # noqa: E402
 
+binaries = [
+    (str(BINM / "ffmpeg"), "."),    # PyInstaller ci tira dietro le .dylib di Homebrew
+    (str(BINM / "ffprobe"), "."),
+]
+
 datas = [
     (str(ROOT / "ui"), "ui"),
-    (str(BINM / "ffmpeg"), "."),
-    (str(BINM / "ffprobe"), "."),
-    (str(BINM / "yt-dlp"), "."),
+    (str(BINM / "yt-dlp"), "."),    # standalone opaco (universal2); +x a runtime
 ]
 
 hiddenimports = [
@@ -45,7 +50,7 @@ hiddenimports = [
 a = Analysis(
     [str(ROOT / "app.py")],
     pathex=[str(ROOT)],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
