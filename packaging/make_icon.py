@@ -1,4 +1,4 @@
-"""Genera l'icona dell'app: quadrato arrotondato teal + onda audio bianca.
+"""Genera l'icona dell'app: quadrato arrotondato indaco + onda audio bianca.
 Produce packaging/icon.png (anteprima) e packaging/icon.ico (multi-risoluzione)."""
 from pathlib import Path
 from PIL import Image, ImageDraw
@@ -6,9 +6,9 @@ from PIL import Image, ImageDraw
 OUT = Path(__file__).parent
 S = 1024  # render ad alta risoluzione, poi si ridimensiona (bordi netti)
 
-# --- sfondo: gradiente teal verticale (tema app, accento #0f9d8f) ---
-top = (20, 190, 170)     # teal un filo piu' chiaro in alto
-bot = (11, 120, 109)     # teal piu' scuro in basso (profondita')
+# --- sfondo: gradiente indaco verticale (tema app, accento #4f46e5) ---
+top = (99, 102, 241)     # indaco un filo piu' chiaro in alto (#6366f1)
+bot = (67, 56, 202)      # indaco piu' scuro in basso (#4338ca, profondita')
 col = Image.new("RGB", (1, S))
 for y in range(S):
     t = y / (S - 1)
