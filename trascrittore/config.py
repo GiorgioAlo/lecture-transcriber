@@ -123,9 +123,12 @@ WORKER_PARALLELI = 4           # blocchi di testo elaborati in parallelo
 # e per lingua/materia. La FASE TESTO usa meno tentativi (vedi MAX_TENTATIVI_TESTO).
 MAX_TENTATIVI = 8             # ritentativi su errori temporanei (429/503/...)
 # La fase testo (pulizia/traduzione) si arrende PRIMA dell'ASR: se Google e' giu'
-# meglio fallire in fretta e dirlo all'utente (la lezione resta in cache, riaccodabile)
-# che insistere a lungo. L'ASR col budget pieno (8) tiene duro sul lavoro vero.
-MAX_TENTATIVI_TESTO = 5       # ritentativi nella fase testo (piu' bassi di MAX_TENTATIVI)
+# (o rifiuta un blocco) meglio fallire in fretta, mettere un marcatore visibile nel
+# Word al posto del blocco e avvisare l'utente, che insistere a lungo. L'ASR col budget
+# pieno (8) tiene duro sul lavoro vero. Abbassato 5->3 il 2026-10-16: un blocco che non
+# passa la pulizia e' quasi sempre un problema persistente (raro: il testo ha gia'
+# passato la trascrizione) -> 3 giri bastano, poi si segna il buco e si prosegue.
+MAX_TENTATIVI_TESTO = 3       # ritentativi nella fase testo (piu' bassi di MAX_TENTATIVI)
 # Pausa PROATTIVA tra pulizia (FASE 2) e traduzione (FASE 3). DISATTIVATA (=0) il
 # 2026-10-11 dopo misura su 4 lezioni reali: pulizia->traduzione SENZA pausa non
 # ha mai preso un 429 TPM. Motivo: il TPM conta i soli token di INPUT (doc Gemini)

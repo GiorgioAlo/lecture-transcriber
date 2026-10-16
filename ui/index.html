@@ -966,8 +966,20 @@ function appLezioneFatta(path, info){
   var li = cardByPath(path); if(!li) return;
   _stopCreep(li);
   li.dataset.state = 'done';
-  li.querySelector('.qicon').innerHTML = SVG_OK;
-  li.querySelector('.qdone').textContent = '✓ ' + info.documenti + ' document' + (info.documenti===1?'o':'i') + ' (' + info.lingue + ')';
+  var base = '✓ ' + info.documenti + ' document' + (info.documenti===1?'o':'i') + ' (' + info.lingue + ')';
+  // Lezione completata ma con parti NON elaborate (Gemini ha rifiutato/fallito alcuni
+  // blocchi dopo i tentativi): avviso l'utente. Nel Word, al posto di ogni blocco, c'e'
+  // gia' un marcatore visibile "[⚠️ ERRORE CRITICO: ...]".
+  if(info.completo === false){
+    var n = info.blocchi_falliti || 0;
+    li.querySelector('.qicon').innerHTML = SVG_WARN;
+    li.querySelector('.qdone').textContent = base + ' — ' + (n ? n + ' parti non elaborate' : 'alcune parti non elaborate');
+    toast('warn', 'Completata con parti mancanti',
+          (n ? n + ' blocco/i ' : 'Alcune parti ') + 'non è stato possibile elaborarli: nel Word trovi un segnaposto ⚠️ dove manca il testo.');
+  } else {
+    li.querySelector('.qicon').innerHTML = SVG_OK;
+    li.querySelector('.qdone').textContent = base;
+  }
   var done = document.getElementById('queue-done');   // passa in CIMA a 'Completate'
   done.insertBefore(li, done.firstChild);
   aggiornaSezioni();

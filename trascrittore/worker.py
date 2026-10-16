@@ -80,6 +80,7 @@ def esegui_in_processo(q, jobs, keys, chiave, work_base, rifai=False, cancel_eve
                 "documenti": [str(d) for d in ris.documenti],
                 "lingua_sorgente": ris.lingua_sorgente,
                 "completo": bool(ris.completo),
+                "blocchi_falliti": int(ris.blocchi_falliti),
             }))
         else:
             # Mando il TIPO dell'errore (nome classe) cosi il padre sceglie il

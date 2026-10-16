@@ -925,7 +925,9 @@ class Api:
         self._fatte[key] = ris
         self._scrivi_meta(key, ris, lingue)
         info = {"documenti": len(ris.documenti),
-                "lingue": ", ".join(x.upper() for x in lingue)}
+                "lingue": ", ".join(x.upper() for x in lingue),
+                "completo": bool(light.get("completo", True)),
+                "blocchi_falliti": int(light.get("blocchi_falliti", 0))}
         self._js("appLezioneFatta(" + json.dumps(key) + "," + json.dumps(info) + ")")
         if self._cartella_batch:
             self._autosave(key, ris, self._cartella_batch)
@@ -936,6 +938,7 @@ class Api:
         titoli = {
             "LimiteGiornaliero": "Finite le lezioni di oggi",
             "DownloadFallito": "Download non riuscito",
+            "ContenutoBloccato": "Contenuto non trascrivibile",
             "ChiaveMancante": "Impossibile procedere",
             "FfmpegMancante": "Impossibile procedere",
         }
