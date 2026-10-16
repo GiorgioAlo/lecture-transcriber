@@ -61,6 +61,15 @@ The app (and Colab) need a free personal key from Google:
 3. Start — the app transcribes, cleans up the text and writes a **Word document** per language.
    (Webex "personal room" recordings also need a `cookies.txt` exported from your browser.)
 
+## ⏳ If it's slow, or a lecture stops with a "server busy" message
+The app uses Google Gemini on the **free tier**, so it shares capacity with everyone else.
+When Google's servers are under heavy load they temporarily refuse requests ("high demand"),
+and transcription can get **slow** or a lecture may **stop with a message saying Google is busy**.
+This is a temporary problem **on Google's side, not a bug in the app** — and it comes and goes
+within minutes. Just **wait a few minutes and press "Retry"** on the lecture: it resumes from
+where it left off (already-done parts are kept), so you don't lose any work. If a whole stretch
+of the day is bad, try again later.
+
 ---
 
 ## 🔒 Privacy & responsible use
