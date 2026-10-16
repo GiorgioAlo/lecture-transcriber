@@ -213,7 +213,15 @@ body{margin:0;background:var(--app);color:var(--fg);font-family:var(--font);line
 
 /* nostra finestra di dialogo (modal) — scelta cartella all'avvio */
 .overlay{position:fixed;inset:0;background:rgba(20,20,30,.38);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
-.modal{background:var(--window);border:1px solid var(--border);border-radius:var(--r-card);box-shadow:var(--shadow);max-width:460px;width:100%;padding:22px}
+.modal{position:relative;background:var(--window);border:1px solid var(--border);border-radius:var(--r-card);box-shadow:var(--shadow);max-width:460px;width:100%;padding:22px}
+.modal-x{position:absolute;top:13px;right:13px;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:0;background:transparent;color:var(--faint);cursor:pointer;transition:.16s}
+.modal-x:hover{background:var(--panel);color:var(--fg)}
+.modal-x svg{width:17px;height:17px}
+.pick-acts{display:flex;align-items:center;gap:6px;flex:none;margin-left:4px}
+.pick-ic{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;border:1px solid var(--border-strong);background:var(--window);color:var(--muted);cursor:pointer;transition:.16s}
+.pick-ic:hover{border-color:var(--accent);color:var(--accent)}
+.pick-ic.danger:hover{border-color:var(--err);color:var(--err);background:var(--err-soft)}
+.pick-ic svg{width:15px;height:15px}
 .modal h3{font-family:var(--font-display);font-size:17px;font-weight:700;letter-spacing:-.01em;margin:0 0 7px}
 .modal p{font-size:13px;color:var(--muted);margin:0 0 16px}
 .modal .pick{display:flex;align-items:center;gap:11px;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:11px 13px;margin-bottom:18px}
@@ -250,7 +258,7 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
 .guide-s b{color:var(--fg)}
 
 /* toast */
-.toasts{position:fixed;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;pointer-events:none;z-index:40}
+.toasts{position:fixed;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;pointer-events:none;z-index:80}
 .toast{pointer-events:auto;max-width:460px;width:100%;display:flex;gap:11px;align-items:flex-start;background:var(--window);border:1px solid var(--border-strong);
   border-left:4px solid var(--warn);border-radius:var(--r-card);padding:13px 15px;box-shadow:var(--shadow);animation:rise .25s ease}
 .toast.err{border-left-color:var(--err)}
@@ -461,18 +469,28 @@ try{var _th=localStorage.getItem('ui_theme');if(_th==='dark')document.documentEl
 
 <div class="overlay" id="settings" hidden>
   <div class="modal" role="dialog" aria-modal="true">
+    <button class="modal-x" data-i18n-title="close" title="Chiudi" onclick="chiudiImpostazioni()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     <h3 data-i18n="set.title">Impostazioni</h3>
     <p data-i18n="set.body">La tua chiave API di Google Gemini, salvata in modo sicuro sul PC.</p>
     <div class="pick chosen">
       <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.5 12.5 7-7M17 7l1.5 1.5M14 10l1.5 1.5"/></svg></span>
       <span class="pt"><div class="p1" data-i18n="set.keysaved">Chiave salvata</div><div class="p2" id="set-preview">—</div></span>
+      <span class="pick-acts">
+        <button class="pick-ic" id="set-edit-btn" data-i18n-title="edit" title="Modifica" onclick="modificaChiave()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        <button class="pick-ic danger" id="set-del-btn" data-i18n-title="set.delete" title="Elimina chiave" onclick="eliminaChiave()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+      </span>
     </div>
     <div id="set-edit" hidden>
-      <div class="field">
+      <div class="field" style="margin-top:12px">
         <input class="input" id="set-key" type="password" data-i18n-ph="set.keyph" placeholder="Incolla la nuova chiave…">
         <button class="eye" type="button" data-i18n-title="show" title="Mostra" onclick="toggleKey('set-key',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
       </div>
       <p class="ob-err" id="set-err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span id="set-err-t"></span></p>
+      <div class="row-btn" style="margin-top:12px">
+        <span class="grow"></span>
+        <button class="linklike" onclick="annullaModifica()" data-i18n="cancel">Annulla</button>
+        <button class="btn primary mini" id="set-save" onclick="salvaChiaveImpostazioni()" data-i18n="save">Salva</button>
+      </div>
     </div>
     <div class="set-extra">
       <div class="set-line">
@@ -481,15 +499,8 @@ try{var _th=localStorage.getItem('ui_theme');if(_th==='dark')document.documentEl
       </div>
       <div class="set-tools">
         <button class="btn ghost" id="btn-segnala" hidden onclick="segnalaProblema()" data-i18n="set.report">Segnala un problema</button>
-        <button class="btn ghost" id="btn-ytdlp" onclick="aggiornaYtdlp(this)" data-i18n="set.ytdlp">Aggiorna motore di download</button>
+        <button class="btn ghost" id="btn-updates" onclick="cercaAggiornamenti(this)" data-i18n="set.updates">Cerca aggiornamenti</button>
       </div>
-    </div>
-    <div class="row-btn" style="margin-top:18px">
-      <button class="linklike danger" onclick="eliminaChiave()" data-i18n="set.delete">Elimina chiave</button>
-      <span class="grow"></span>
-      <button class="btn ghost" onclick="chiudiImpostazioni()" data-i18n="close">Chiudi</button>
-      <button class="btn ghost" id="set-mod" onclick="modificaChiave()" data-i18n="edit">Modifica</button>
-      <button class="btn primary" id="set-save" onclick="salvaChiaveImpostazioni()" hidden data-i18n="save">Salva</button>
     </div>
   </div>
 </div>
@@ -540,7 +551,9 @@ var I18N = {
     'ob.save':'Salva e continua',
     'set.body':'La tua chiave API di Google Gemini, salvata in modo sicuro sul PC.',
     'set.keysaved':'Chiave salvata','set.keyph':'Incolla la nuova chiave…',
-    'set.version':'Versione app','set.report':'Segnala un problema','set.ytdlp':'Aggiorna motore di download',
+    'set.version':'Versione app','set.report':'Segnala un problema','set.updates':'Cerca aggiornamenti',
+    'upd.checking':'Controllo…','t.upToDateTitle':'Sei aggiornato','t.upToDateDesc':'Hai già l\'ultima versione dell\'app.',
+    't.updCheckFailTitle':'Controllo non riuscito','t.updCheckFailDesc':'Non riesco a controllare ora (connessione?). Riprova.',
     'set.delete':'Elimina chiave','close':'Chiudi','edit':'Modifica','save':'Salva',
     'badge.file':'File','badge.link':'Link','badge.webex':'Webex',
     'card.del':'Togli dalla coda','card.save':'Salva…','card.open':'Apri cartella',
@@ -548,7 +561,7 @@ var I18N = {
     'phase.0':'Estrazione audio','phase.1':'Trascrizione','phase.2':'Pulizia','phase.3':'Traduzione',
     'hide':'Nascondi','starting':'Avvio…','canceling':'Annullo…',
     'cancel.one':'Annullo questa lezione… finisco il blocco in corso','cancel.all':'Annullo tutto…',
-    'updating':'Aggiornamento…','verifying':'Verifico…',
+    'verifying':'Verifico…',
     'sub.willdownload':'scaricherò l\'audio','lang.notfound':'Nessuna lingua trovata',
     'btn.needcookie':'Carica prima i cookie di Webex (qui sotto)',
     't.previewTitle':'Anteprima nel browser','t.previewSaveKey':'Apri l\'app vera per salvare la chiave.',
@@ -624,7 +637,9 @@ var I18N = {
     'ob.save':'Save and continue',
     'set.body':'Your Google Gemini API key, saved securely on your PC.',
     'set.keysaved':'Key saved','set.keyph':'Paste the new key…',
-    'set.version':'App version','set.report':'Report a problem','set.ytdlp':'Update download engine',
+    'set.version':'App version','set.report':'Report a problem','set.updates':'Check for updates',
+    'upd.checking':'Checking…','t.upToDateTitle':'You\'re up to date','t.upToDateDesc':'You already have the latest version of the app.',
+    't.updCheckFailTitle':'Check failed','t.updCheckFailDesc':'Can\'t check right now (connection?). Try again.',
     'set.delete':'Delete key','close':'Close','edit':'Edit','save':'Save',
     'badge.file':'File','badge.link':'Link','badge.webex':'Webex',
     'card.del':'Remove from queue','card.save':'Save…','card.open':'Open folder',
@@ -632,7 +647,7 @@ var I18N = {
     'phase.0':'Audio extraction','phase.1':'Transcription','phase.2':'Cleanup','phase.3':'Translation',
     'hide':'Hide','starting':'Starting…','canceling':'Canceling…',
     'cancel.one':'Canceling this lecture… finishing the current block','cancel.all':'Canceling all…',
-    'updating':'Updating…','verifying':'Verifying…',
+    'verifying':'Verifying…',
     'sub.willdownload':'I\'ll download the audio','lang.notfound':'No language found',
     'btn.needcookie':'Load the Webex cookies first (below)',
     't.previewTitle':'Browser preview','t.previewSaveKey':'Open the real app to save the key.',
@@ -798,8 +813,6 @@ function salvaChiaveOnboarding(){
 function apriImpostazioni(){
   document.getElementById('set-preview').textContent = _keyPreview || '—';
   document.getElementById('set-edit').hidden = true;
-  document.getElementById('set-mod').hidden = false;
-  document.getElementById('set-save').hidden = true;
   document.getElementById('set-key').value = '';
   mostraErr('set-err','set-err-t','');
   document.getElementById('settings').hidden = false;
@@ -812,17 +825,19 @@ function apriImpostazioni(){
 function chiudiImpostazioni(){ document.getElementById('settings').hidden = true; }
 function modificaChiave(){
   document.getElementById('set-edit').hidden = false;
-  document.getElementById('set-mod').hidden = true;
-  document.getElementById('set-save').hidden = false;
   document.getElementById('set-key').focus();
+}
+function annullaModifica(){
+  document.getElementById('set-edit').hidden = true;
+  document.getElementById('set-key').value = '';
+  mostraErr('set-err','set-err-t','');
 }
 function salvaChiaveImpostazioni(){
   salvaChiaveConVerifica(document.getElementById('set-key').value, document.getElementById('set-save'),
     'set-err','set-err-t', function(){
       document.getElementById('set-preview').textContent = _keyPreview;
       document.getElementById('set-edit').hidden = true;
-      document.getElementById('set-mod').hidden = false;
-      document.getElementById('set-save').hidden = true;
+      document.getElementById('set-key').value = '';
       toast('ok',t('t.savedTitle'),t('t.savedDesc'));
     });
 }
@@ -1360,17 +1375,19 @@ function segnalaProblema(){
     if(!r || !r.ok) toast('warn',t('t.formNotAvailTitle'),t('t.formNotAvailDesc'));
   });
 }
-function aggiornaYtdlp(btn){
-  if(!api() || !api().aggiorna_ytdlp){ toast('warn',t('t.notAvailTitle'),t('t.updNotAvail')); return; }
-  if(btn){ btn.disabled = true; var txt = btn.textContent; btn.textContent = t('updating');
-    setTimeout(function(){ btn.disabled = false; btn.textContent = txt; }, 6000); }
-  api().aggiorna_ytdlp();   // l'esito arriva via toast dal lato Python
+function cercaAggiornamenti(btn){
+  if(!api() || !api().cerca_aggiornamenti){ toast('warn',t('t.notAvailTitle'),t('t.updNotAvail')); return; }
+  if(btn){ btn.disabled = true; var txt = btn.textContent; btn.textContent = t('upd.checking');
+    setTimeout(function(){ btn.disabled = false; btn.textContent = txt; }, 8000); }
+  api().cerca_aggiornamenti();   // esito via UI (banner / toast) dal lato Python
 }
+function appAggiornato(){ toast('ok', t('t.upToDateTitle'), t('t.upToDateDesc')); }
+function appControlloFallito(){ toast('warn', t('t.updCheckFailTitle'), t('t.updCheckFailDesc')); }
 
 /* --- Banner "aggiornamento disponibile" (persistente, con azioni) --- */
 var _updMostrato = false;
-function appAggiornamento(ver, url){
-  if(_updMostrato) return;   // una volta per sessione, non si ripete
+function appAggiornamento(ver, url, force){
+  if(_updMostrato && !force) return;   // auto: una volta per sessione. Manuale (force): sempre.
   _updMostrato = true;
   var t = document.createElement('div'); t.className = 'toast ok';
   t.innerHTML = '<span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v4h-4"/></svg></span>'+

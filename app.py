@@ -510,6 +510,28 @@ class Api:
         threading.Thread(target=_lavora, daemon=True).start()
         return {"ok": True}
 
+    def cerca_aggiornamenti(self):
+        """Controllo aggiornamenti MANUALE ('Cerca aggiornamenti'): forza il check su
+        GitHub (salta il throttle giornaliero), in un thread. Esito via UI:
+          nuovo      -> banner appAggiornamento (con 'Scarica')
+          aggiornato -> toast 'sei aggiornato'
+          errore     -> toast 'controllo non riuscito'.
+        {'ok': True} = richiesta avviata. NON auto-installa: apre la pagina di download."""
+        def _lavora():
+            try:
+                r = aggiornamenti.controlla_manuale()
+            except Exception:
+                traceback.print_exc()
+                r = {"stato": "errore"}
+            if r.get("stato") == "nuovo":
+                self._js(f"appAggiornamento({json.dumps(r['versione'])}, {json.dumps(r['url'])}, true)")
+            elif r.get("stato") == "aggiornato":
+                self._js("appAggiornato()")
+            else:
+                self._js("appControlloFallito()")
+        threading.Thread(target=_lavora, daemon=True).start()
+        return {"ok": True}
+
     # --- lezioni gia' in cache (ripristino all'avvio) -----------------------
     def lezioni_in_cache(self):
         """Elenca le lezioni gia' completate trovate in cache/ (per ripopolare

@@ -137,3 +137,28 @@ def controlla(force: bool = False) -> dict | None:
     if rel and e_piu_recente(rel["tag_name"], config.VERSION):
         return {"versione": rel["tag_name"].lstrip("vV"), "url": rel["html_url"]}
     return None
+
+
+def controlla_manuale() -> dict:
+    """Check su richiesta (pulsante 'Cerca aggiornamenti'): come controlla(force=True)
+    ma DISTINGUE gli esiti, cosi' la UI puo' dire qualcosa in ogni caso:
+      {'stato': 'nuovo', 'versione', 'url'}  -> c'e' una versione piu' nuova
+      {'stato': 'aggiornato'}                -> gia' all'ultima versione
+      {'stato': 'errore'}                    -> rete giu' / repo non configurato / GitHub ko
+    Non solleva mai."""
+    owner = (config.GITHUB_OWNER or "").strip()
+    repo = (config.GITHUB_REPO or "").strip()
+    if not owner or not repo:
+        return {"stato": "errore"}
+    try:
+        rel = _ultima_release_github(owner, repo, config.TIMEOUT_CHECK_UPDATE_S)
+    except Exception:
+        return {"stato": "errore"}
+    if not rel:
+        return {"stato": "errore"}
+    stato = _leggi_stato()                      # un check riuscito aggiorna il throttle
+    stato["ultimo_controllo"] = date.today().isoformat()
+    _scrivi_stato(stato)
+    if e_piu_recente(rel["tag_name"], config.VERSION):
+        return {"stato": "nuovo", "versione": rel["tag_name"].lstrip("vV"), "url": rel["html_url"]}
+    return {"stato": "aggiornato"}
