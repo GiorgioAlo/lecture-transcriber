@@ -16,7 +16,7 @@ from google.genai import types
 
 from . import config, languages
 from .errors import Interrotto, LimiteGiornaliero
-from .gemini import con_retry
+from .gemini import IMPOSTAZIONI_SICUREZZA, con_retry
 from .progress import Reporter
 
 
@@ -55,7 +55,8 @@ def rileva_lingua(client, testo: str, interrotto=None) -> str:
         r = client.models.generate_content(
             model=config.TEXT_MODEL,
             contents=prompt,
-            config=types.GenerateContentConfig(temperature=0.0),
+            config=types.GenerateContentConfig(
+                temperature=0.0, safety_settings=IMPOSTAZIONI_SICUREZZA),
         )
         return (r.text or "").strip().lower()
 
@@ -123,7 +124,9 @@ def deduci_materia(client, testo: str, interrotto=None) -> str:
         r = client.models.generate_content(
             model=config.TEXT_MODEL,
             contents=prompt,
-            config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=200),
+            config=types.GenerateContentConfig(
+                temperature=0.0, max_output_tokens=200,
+                safety_settings=IMPOSTAZIONI_SICUREZZA),
         )
         return (r.text or "").strip()
 
@@ -219,7 +222,8 @@ def _elabora_blocco(client, indice, totale, blocco, sorgente, destinazione, cors
             model=config.TEXT_MODEL,
             contents=prompt,
             config=types.GenerateContentConfig(
-                temperature=0.1, max_output_tokens=config.MAX_OUTPUT_TOKENS),
+                temperature=0.1, max_output_tokens=config.MAX_OUTPUT_TOKENS,
+                safety_settings=IMPOSTAZIONI_SICUREZZA),
         )
         testo = (risposta.text or "").strip()
         if not testo:

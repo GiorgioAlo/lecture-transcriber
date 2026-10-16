@@ -15,13 +15,30 @@ from google import genai
 from google.genai import types
 
 from . import config
-from .errors import ChiaveMancante, Interrotto, LimiteGiornaliero
+from .errors import ChiaveMancante, ContenutoBloccato, Interrotto, LimiteGiornaliero
 
 # Nasconde i warning rumorosi del client (AFC / non-text-parts).
 for _n in ("google_genai.models", "google_genai.types", "google_genai"):
     logging.getLogger(_n).setLevel(logging.ERROR)
 
 T = TypeVar("T")
+
+# Filtri di sicurezza su BLOCK_NONE. Stiamo TRASCRIVENDO e traducendo FEDELMENTE
+# cio' che viene detto (in aula o in un video): parolacce, bestemmie e volgarita'
+# incluse. Coi filtri di DEFAULT Gemini a volte RIFIUTA un blocco con contenuti
+# che considera "sensibili" e torna una risposta VUOTA (nessun candidato) -> la
+# trascrizione di quel pezzo andava persa (e prima mandava l'app in crash). Non
+# siamo noi a generare quei contenuti: li riportiamo e basta, quindi disattiviamo
+# il blocco. (Restano fuori dal nostro controllo casi come il copyright.)
+IMPOSTAZIONI_SICUREZZA = [
+    types.SafetySetting(category=c, threshold=types.HarmBlockThreshold.BLOCK_NONE)
+    for c in (
+        types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+        types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+        types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    )
+]
 
 
 def crea_client(chiave: str, timeout_s: float | None = None) -> genai.Client:
@@ -126,6 +143,8 @@ def con_retry(
     for tentativo in range(1, max_tentativi + 1):
         try:
             return azione()
+        except ContenutoBloccato:
+            raise               # Gemini ha rifiutato il contenuto: inutile ritentare
         except Exception as e:
             rd, per_giorno = _dettagli_errore(e)
             if per_giorno:

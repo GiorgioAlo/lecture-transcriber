@@ -28,3 +28,9 @@ class FfmpegMancante(ErrorePipeline):
 
 class DownloadFallito(ErrorePipeline):
     """Impossibile scaricare l'audio dal link (link protetto, cookie scaduti, rete...)."""
+
+
+class ContenutoBloccato(ErrorePipeline):
+    """Gemini ha RIFIUTATO di elaborare l'audio/il testo (filtro di sicurezza,
+    copyright/recitation, blocklist). Non c'e' nulla da ritentare: la risposta
+    torna senza candidati. Distinta dalle altre per dare un messaggio chiaro."""

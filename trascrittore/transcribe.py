@@ -31,8 +31,8 @@ from pathlib import Path
 from google.genai import types
 
 from . import audio, config, util
-from .errors import Interrotto
-from .gemini import con_retry
+from .errors import ContenutoBloccato, Interrotto
+from .gemini import IMPOSTAZIONI_SICUREZZA, con_retry
 from .progress import Reporter
 
 PROMPT_TRASCRIZIONE = (
@@ -79,26 +79,83 @@ def _max_run_numeri(t: str) -> int:
     return mx
 
 
-def _carica_file(client, path: Path, interrotto=None):
+def _carica_file(client, path: Path, reporter: Reporter):
     """Carica un file audio via File API e attende che sia ACTIVE.
 
-    L'attesa (il file resta in PROCESSING) e' annullabile: se l'utente annulla,
-    solleva Interrotto invece di restare nel ciclo."""
-    f = client.files.upload(file=str(path))
+    L'UPLOAD passa da con_retry: un blip di rete (es. 'Server disconnected without
+    sending a response') o un 503 non fa piu' fallire il blocco (e quindi l'intera
+    lezione), ma riprova con backoff. Anche il polling dello stato tollera un
+    singolo intoppo (riprova al giro dopo). L'attesa (file in PROCESSING) resta
+    annullabile: se l'utente annulla, solleva Interrotto invece di restare nel ciclo."""
+    def _upload():
+        return client.files.upload(file=str(path))
+
+    f = con_retry(_upload, f"carico {path.name}", reporter.log,
+                  interrotto=reporter.interrotto)
     while f.state.name == "PROCESSING":
-        if interrotto is not None and interrotto():
+        if reporter.interrotto():
             raise Interrotto()
         time.sleep(2)
-        f = client.files.get(name=f.name)
+        try:
+            f = client.files.get(name=f.name)
+        except Exception:
+            continue   # intoppo di rete durante il polling: non e' fatale, ritento
     if f.state.name != "ACTIVE":
         raise RuntimeError(f"upload fallito ({f.state.name}) per {path.name}")
     return f
 
 
+# Motivi per cui Gemini puo' RIFIUTARE di rispondere. Li riconosciamo per dare
+# all'utente un messaggio chiaro invece di crashare o ritentare a vuoto. Coi
+# filtri a BLOCK_NONE (gemini.IMPOSTAZIONI_SICUREZZA) i blocchi per sola
+# volgarita' non dovrebbero piu' scattare; restano casi fuori dal nostro
+# controllo come il copyright (RECITATION) o una blocklist del modello.
+_FINISH_BLOCCO = {"SAFETY", "RECITATION", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII"}
+
+def _messaggio_blocco(motivo: str) -> str:
+    """Messaggio utente a seconda del PERCHE' Gemini ha rifiutato. Il motivo tecnico
+    e' sempre incluso in coda: ci dice se e' qualcosa che possiamo toccare (safety,
+    ora gia' a BLOCK_NONE) o no (copyright/proibito, non disattivabili sull'API)."""
+    m = (motivo or "").upper()
+    if m == "RECITATION":
+        testa = ("Gemini riconosce nell'audio materiale protetto da copyright "
+                 "(musica o clip di un programma) e non lo trascrive.")
+    elif m in ("SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII"):
+        testa = ("Gemini considera questo audio non adatto e si rifiuta di trascriverlo.")
+    else:
+        testa = "Gemini si e' rifiutato di elaborare questo audio."
+    return (f"{testa} (motivo tecnico: {motivo}). "
+            "Capita con i video di intrattenimento; con le lezioni normali non succede.")
+
+
+def _motivo_blocco(risposta) -> str | None:
+    """Se Gemini ha BLOCCATO la risposta, ritorna il motivo leggibile, altrimenti None.
+    Due forme: blocco del PROMPT (`prompt_feedback.block_reason`, candidati vuoti)
+    o blocco del CANDIDATO (`finish_reason` = SAFETY/RECITATION/...)."""
+    pf = getattr(risposta, "prompt_feedback", None)
+    br = getattr(pf, "block_reason", None)
+    if br:
+        return str(br).split(".")[-1]
+    cand = getattr(risposta, "candidates", None) or []
+    if cand:
+        fr = str(getattr(cand[0], "finish_reason", "") or "").split(".")[-1]
+        if fr in _FINISH_BLOCCO:
+            return fr
+    return None
+
+
 def _estrai_transcript(risposta) -> str:
-    """transcribe mette il testo in part.audio_transcription.text; i generalisti in part.text."""
+    """transcribe mette il testo in part.audio_transcription.text; i generalisti in part.text.
+
+    Robusto quando Gemini non torna candidati o parti (risposta bloccata/vuota):
+    ritorna "" invece di indicizzare un None (era il crash
+    `'NoneType' object is not subscriptable`)."""
+    cand = getattr(risposta, "candidates", None) or []
+    if not cand:
+        return ""
+    parti = getattr(getattr(cand[0], "content", None), "parts", None) or []
     pezzi = []
-    for part in risposta.candidates[0].content.parts:
+    for part in parti:
         at = getattr(part, "audio_transcription", None)
         if at is not None and getattr(at, "text", None):
             pezzi.append(at.text)
@@ -183,10 +240,20 @@ def _genera(client, model: str, file_obj, extra: dict, reporter: Reporter, descr
         risposta = client.models.generate_content(
             model=model,
             contents=[file_obj, PROMPT_TRASCRIZIONE],
-            config=types.GenerateContentConfig(temperature=config.TEMP_TRASCRIZIONE, **extra),
+            config=types.GenerateContentConfig(
+                temperature=config.TEMP_TRASCRIZIONE,
+                safety_settings=IMPOSTAZIONI_SICUREZZA,
+                **extra),
         )
         testo = _estrai_transcript(risposta)
         if not testo:
+            # Niente testo: o Gemini ha RIFIUTATO (safety/copyright) -> errore chiaro
+            # SUBITO (con_retry non lo ritenta), oppure e' un vuoto transitorio ->
+            # RuntimeError, che con_retry ritenta.
+            motivo = _motivo_blocco(risposta)
+            if motivo:
+                reporter.log(f"⛔ [{descr}] Gemini ha BLOCCATO il contenuto — motivo: {motivo}")
+                raise ContenutoBloccato(_messaggio_blocco(motivo))
             raise RuntimeError("trascrizione vuota")
         finish = str(getattr(risposta.candidates[0], "finish_reason", "")).split(".")[-1]
         return testo, finish
@@ -207,7 +274,7 @@ def _trascrivi_con_guardia(client, chunk_path: Path, durata_sec: float,
         "max_output_tokens": cap,
         "thinking_config": types.ThinkingConfig(thinking_budget=config.ASR_THINKING_BUDGET),
     }
-    f = _carica_file(client, chunk_path, reporter.interrotto)
+    f = _carica_file(client, chunk_path, reporter)
     try:
         tentativi_ok: list[str] = []
         for t in range(1, config.ASR_MAX_TENTATIVI + 1):

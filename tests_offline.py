@@ -167,5 +167,103 @@ u2 = aggiornamenti.url_segnalazione("1.2.3")
 check("senza campo -> form nudo (niente query pp_url)", u2 is not None and "pp_url" not in u2)
 config.URL_FORM_SEGNALAZIONE, config.FORM_CAMPO_VERSIONE = _u, _c
 
+print("\n#  transcribe: risposta Gemini bloccata/vuota (niente crash, errore chiaro)")
+# Risposte Gemini finte: riproducono i casi che prima mandavano l'app in crash
+# ('NoneType' object is not subscriptable) perche' si faceva candidates[0] a vuoto.
+class _FintaParte:
+    def __init__(self, text=None, at=None):
+        self.text = text
+        self.audio_transcription = at
+
+class _FintoContenuto:
+    def __init__(self, parts):
+        self.parts = parts
+
+class _FintoCandidato:
+    def __init__(self, parts=None, finish_reason="STOP"):
+        self.content = _FintoContenuto(parts) if parts is not None else None
+        self.finish_reason = finish_reason
+
+class _FintoFeedback:
+    def __init__(self, block_reason):
+        self.block_reason = block_reason
+
+class _FintaRisposta:
+    def __init__(self, candidates=None, prompt_feedback=None):
+        self.candidates = candidates
+        self.prompt_feedback = prompt_feedback
+
+# 1) PROMPT bloccato: candidates=None (il caso del video reaction segnalato)
+bloccata_prompt = _FintaRisposta(candidates=None,
+                                 prompt_feedback=_FintoFeedback("SAFETY"))
+check("candidates=None NON crasha, estrae ''", transcribe._estrai_transcript(bloccata_prompt) == "")
+check("prompt_feedback.block_reason riconosciuto", transcribe._motivo_blocco(bloccata_prompt) == "SAFETY")
+
+# 2) CANDIDATO bloccato: content/parts None, finish_reason non-STOP
+bloccata_cand = _FintaRisposta(candidates=[_FintoCandidato(parts=None, finish_reason="RECITATION")])
+check("content.parts=None NON crasha, estrae ''", transcribe._estrai_transcript(bloccata_cand) == "")
+check("finish_reason RECITATION riconosciuto come blocco", transcribe._motivo_blocco(bloccata_cand) == "RECITATION")
+
+# 3) risposta NORMALE: testo estratto, nessun blocco
+ok_resp = _FintaRisposta(candidates=[_FintoCandidato(parts=[_FintaParte(text="Ciao a tutti.")])])
+check("risposta normale: testo estratto", transcribe._estrai_transcript(ok_resp) == "Ciao a tutti.")
+check("risposta normale: nessun motivo di blocco", transcribe._motivo_blocco(ok_resp) is None)
+
+# 4) vuoto transitorio (nessun candidato, nessun block_reason) != blocco
+vuota = _FintaRisposta(candidates=[], prompt_feedback=None)
+check("vuoto senza block_reason -> NON e' un blocco (ritentabile)", transcribe._motivo_blocco(vuota) is None)
+
+print("\n#  gemini.con_retry: ContenutoBloccato NON viene ritentato")
+from trascrittore.gemini import con_retry
+from trascrittore.errors import ContenutoBloccato
+_chiamate = {"n": 0}
+def _azione_bloccata():
+    _chiamate["n"] += 1
+    raise ContenutoBloccato("rifiutato")
+try:
+    con_retry(_azione_bloccata, "test", max_tentativi=5)
+    check("con_retry rilancia ContenutoBloccato", False)
+except ContenutoBloccato:
+    check("con_retry rilancia ContenutoBloccato", True)
+check("ContenutoBloccato: una sola chiamata (nessun retry)", _chiamate["n"] == 1)
+
+# contro-prova: un errore generico viene ritentato fino a max_tentativi
+_chiamate2 = {"n": 0}
+def _azione_transitoria():
+    _chiamate2["n"] += 1
+    raise RuntimeError("vuota")
+try:
+    con_retry(_azione_transitoria, "test", max_tentativi=3)
+except RuntimeError:
+    pass
+check("errore generico ritentato max_tentativi volte", _chiamate2["n"] == 3)
+
+print("\n#  transcribe._carica_file: l'upload riprova su un blip di rete (non fa cadere la lezione)")
+class _FakeState:
+    def __init__(self, nm): self.name = nm
+class _FakeFile:
+    def __init__(self, stato): self.state = _FakeState(stato); self.name = "files/x"
+class _FakeFiles:
+    def __init__(self): self.tent = 0
+    def upload(self, file=None):
+        self.tent += 1
+        if self.tent == 1:
+            raise RuntimeError("Server disconnected without sending a response")
+        return _FakeFile("ACTIVE")
+    def get(self, name=None): return _FakeFile("ACTIVE")
+class _FakeClient:
+    def __init__(self): self.files = _FakeFiles()
+class _RepT:
+    def log(self, m): pass
+    def interrotto(self): return False
+_fc = _FakeClient()
+_f = transcribe._carica_file(_fc, Path("x.m4a"), _RepT())
+check("upload: 1 blip -> riprova e torna ACTIVE", _f.state.name == "ACTIVE" and _fc.files.tent == 2)
+
+print("\n#  gemini.IMPOSTAZIONI_SICUREZZA: filtri a BLOCK_NONE")
+from trascrittore.gemini import IMPOSTAZIONI_SICUREZZA
+check("4 categorie coperte", len(IMPOSTAZIONI_SICUREZZA) == 4)
+check("tutte BLOCK_NONE", all(str(s.threshold).endswith("BLOCK_NONE") for s in IMPOSTAZIONI_SICUREZZA))
+
 print(f"\n==== RISULTATO: {ok} PASS, {ko} FAIL ====")
 raise SystemExit(1 if ko else 0)
