@@ -70,6 +70,10 @@ within minutes. Just **wait a few minutes and press "Retry"** on the lecture: it
 where it left off (already-done parts are kept), so you don't lose any work. If a whole stretch
 of the day is bad, try again later.
 
+**Tip on timing:** these services tend to be busiest in the **European afternoon** (which overlaps
+with the US morning). If you keep hitting slowdowns, **early morning or late evening** usually works
+better. (There's no official schedule — it just reflects when the most people worldwide are using it.)
+
 ---
 
 ## 🔒 Privacy & responsible use
