@@ -236,11 +236,11 @@ def fase_testo(job: Job, client, reporter: Reporter, work_dir: Path, raw: str, r
         reporter.avanzamento(_pct(4, (k + 1) / max(1, len(job.lingue_output))))
     reporter.fase(4, "fatta"); reporter.avanzamento(100.0)
 
-    # Completo = nessun marcatore d'errore, nei testi finali E nel pulito (se la
-    # lingua parlata non e' tra gli output, il pulito non finisce in `testi`: un
-    # blocco di pulizia fallito sarebbe invisibile al flag senza controllarlo qui).
-    completo = config.MARCATORE_ERRORE not in pulito and \
-        all(config.MARCATORE_ERRORE not in t for t in testi.values())
+    # Completo = nessun blocco fallito (pulizia + traduzione). Usiamo il CONTEGGIO
+    # (`falliti`) invece di cercare il marcatore nel testo: ora un blocco di pulizia
+    # fallito contiene la trascrizione grezza (col marcatore come nota), e in traduzione
+    # il marcatore verrebbe tradotto e non piu' riconosciuto -> il conteggio e' affidabile.
+    completo = (falliti == 0)
     return Risultato(
         nome=job.nome, work_dir=work_dir, lingua_sorgente=lingua_sorgente,
         testi=testi, documenti=documenti, blocchi_falliti=falliti, completo=completo,

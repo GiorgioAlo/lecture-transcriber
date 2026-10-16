@@ -214,7 +214,8 @@ RAW TEXT TO PROCESS:
 """
 
 
-def _elabora_blocco(client, indice, totale, blocco, sorgente, destinazione, corso, reporter):
+def _elabora_blocco(client, indice, totale, blocco, sorgente, destinazione, corso, reporter,
+                    grezzo_su_errore=False):
     prompt = _costruisci_prompt(blocco, sorgente, destinazione, corso)
 
     def azione():
@@ -243,19 +244,33 @@ def _elabora_blocco(client, indice, totale, blocco, sorgente, destinazione, cors
     except (LimiteGiornaliero, Interrotto):
         raise
     except Exception:
-        marcatore = f"\n{config.MARCATORE_ERRORE}: blocco {indice} non elaborato dopo {config.MAX_TENTATIVI_TESTO} tentativi.]\n"
-        return indice, marcatore, True
+        # Blocco non elaborato dopo i tentativi (di solito Gemini occupato = 503).
+        # PULIZIA (grezzo_su_errore=True): invece di un buco, mettiamo la TRASCRIZIONE
+        # GREZZA del blocco con una nota -> l'utente ha comunque il contenuto, solo non
+        # corretto. TRADUZIONE: solo una nota (il grezzo sarebbe nella lingua sbagliata).
+        # Il marcatore resta nel testo -> la lezione risulta "non completa" (avviso + la
+        # cache non viene riusata, cosi' un «Riprova» piu' tardi la ripulisce davvero).
+        if grezzo_su_errore:
+            nota = (f"\n{config.MARCATORE_ERRORE}: questa parte non è stata ripulita "
+                    "(Gemini era occupato); qui sotto c'è la trascrizione grezza, non corretta.]\n")
+            return indice, nota + (blocco or "").strip() + "\n", True
+        nota = f"\n{config.MARCATORE_ERRORE}: questa parte non è stata tradotta (Gemini era occupato).]\n"
+        return indice, nota, True
 
 
-def _processa(client, testo, sorgente, destinazione, corso, reporter, avanzamento):
-    """Elabora tutto il testo (pulizia o traduzione) a blocchi, in parallelo."""
+def _processa(client, testo, sorgente, destinazione, corso, reporter, avanzamento,
+              grezzo_su_errore=False):
+    """Elabora tutto il testo (pulizia o traduzione) a blocchi, in parallelo.
+    `grezzo_su_errore`: se un blocco fallisce, tiene il testo di PARTENZA grezzo
+    invece di un buco (usato dalla PULIZIA: il grezzo e' la trascrizione)."""
     blocchi = dividi_blocchi(testo)
     reporter.log(f"📦 {len(blocchi)} blocchi (max {config.MAX_CARATTERI_BLOCCO} caratteri), "
                  f"{config.WORKER_PARALLELI} in parallelo")
     risultati: list[tuple[int, str]] = []
     errori = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=config.WORKER_PARALLELI) as ex:
-        futs = [ex.submit(_elabora_blocco, client, i, len(blocchi), b, sorgente, destinazione, corso, reporter)
+        futs = [ex.submit(_elabora_blocco, client, i, len(blocchi), b, sorgente, destinazione, corso, reporter,
+                          grezzo_su_errore)
                 for i, b in enumerate(blocchi, 1)]
         for n, f in enumerate(concurrent.futures.as_completed(futs), 1):
             if reporter.interrotto():
@@ -274,9 +289,12 @@ def _processa(client, testo, sorgente, destinazione, corso, reporter, avanzament
 # =====================================================================
 
 def pulisci(client, testo, lingua_sorgente, corso, reporter, avanzamento=lambda f: None):
-    """FASE 2 — ripulisce il testo nella sua stessa lingua."""
+    """FASE 2 — ripulisce il testo nella sua stessa lingua. Se un blocco non si
+    riesce a ripulire (Gemini occupato), tiene la TRASCRIZIONE GREZZA di quel blocco
+    con una nota: meglio il testo grezzo che un buco."""
     nome = languages.nome_prompt(lingua_sorgente)
-    return _processa(client, testo, nome, nome, corso, reporter, avanzamento)
+    return _processa(client, testo, nome, nome, corso, reporter, avanzamento,
+                     grezzo_su_errore=True)
 
 
 def traduci(client, testo_pulito, lingua_sorgente, lingua_target, corso, reporter, avanzamento=lambda f: None):

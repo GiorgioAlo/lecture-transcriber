@@ -169,9 +169,12 @@ TIMEOUT_TESTO_S = 40           # chiamate al modello di testo (flash-lite) — v
 # solo disco senza guadagno. 2 = lezione corrente + 1 pronta in anticipo.
 PREFETCH_LEZIONI = 2
 
-# Marcatore inserito nel testo quando un blocco non si riesce a elaborare:
-# serve a riconoscere un risultato incompleto (per ripresa / avvisi).
-MARCATORE_ERRORE = "[⚠️ ERRORE CRITICO"
+# Marcatore (sentinella) inserito nel testo quando un blocco non si riesce a RIPULIRE
+# o tradurre: serve a riconoscere un risultato incompleto (ripresa dalla cache / avvisi).
+# Etichetta neutra "NOTA" perche' nella PULIZIA non e' un errore vero e proprio: sotto il
+# marcatore mettiamo comunque la trascrizione GREZZA del blocco (vedi textproc), quindi il
+# contenuto c'e', manca solo la correzione. Cambiata da "ERRORE CRITICO" il 2026-10-16.
+MARCATORE_ERRORE = "[⚠️ NOTA"
 
 # --- Le 5 fasi mostrate dalla barra di avanzamento ------------------------
 # L'ordine e il testo DEVONO combaciare con la UI (ui/index.html) e con

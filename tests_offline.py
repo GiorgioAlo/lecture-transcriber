@@ -260,6 +260,27 @@ _fc = _FakeClient()
 _f = transcribe._carica_file(_fc, Path("x.m4a"), _RepT())
 check("upload: 1 blip -> riprova e torna ACTIVE", _f.state.name == "ACTIVE" and _fc.files.tent == 2)
 
+print("\n#  textproc: pulizia fallita -> TRASCRIZIONE GREZZA nel testo (non un buco)")
+class _CliFail:
+    class models:
+        @staticmethod
+        def generate_content(**kw): raise RuntimeError("503 high demand")
+class _RepTx:
+    def log(self, m): pass
+    def interrotto(self): return False
+_old_mt = config.MAX_TENTATIVI_TESTO
+config.MAX_TENTATIVI_TESTO = 1          # 1 tentativo, nessuna attesa di backoff nel test
+_raw_in = "Prima frase grezza del blocco di prova. Seconda frase grezza importante."
+_out, _err = textproc.pulisci(_CliFail(), _raw_in, "it", "", _RepTx())
+check("pulizia fallita: conta il blocco fallito", _err >= 1)
+check("pulizia fallita: il testo GREZZO finisce nel risultato", "Prima frase grezza del blocco di prova" in _out)
+check("pulizia fallita: c'e' la nota/marcatore", config.MARCATORE_ERRORE in _out)
+_out2, _err2 = textproc.traduci(_CliFail(), _raw_in, "it", "en", "", _RepTx())
+check("traduzione fallita: conta il blocco", _err2 >= 1)
+check("traduzione fallita: nota presente", config.MARCATORE_ERRORE in _out2)
+check("traduzione fallita: NON mette il grezzo (lingua sbagliata)", "Prima frase grezza del blocco di prova" not in _out2)
+config.MAX_TENTATIVI_TESTO = _old_mt
+
 print("\n#  gemini.IMPOSTAZIONI_SICUREZZA: filtri a BLOCK_NONE")
 from trascrittore.gemini import IMPOSTAZIONI_SICUREZZA
 check("4 categorie coperte", len(IMPOSTAZIONI_SICUREZZA) == 4)
