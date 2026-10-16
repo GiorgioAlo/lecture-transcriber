@@ -956,7 +956,10 @@ class Api:
         self._snellisci(ris.work_dir)
 
     def _lezione_errore(self, key, kind, msg):
-        """Errore su una lezione: messaggio gentile a seconda del tipo."""
+        """Errore su una lezione: titolo + messaggio GENTILI a seconda del tipo o del
+        contenuto. Gli errori 'grezzi' dell'API Gemini (503/429/rete) vengono tradotti
+        in qualcosa di comprensibile invece di mostrare il JSON dell'errore."""
+        low = (msg or "").lower()
         titoli = {
             "LimiteGiornaliero": "Finite le lezioni di oggi",
             "DownloadFallito": "Download non riuscito",
@@ -964,9 +967,26 @@ class Api:
             "ChiaveMancante": "Impossibile procedere",
             "FfmpegMancante": "Impossibile procedere",
         }
-        titolo = titoli.get(kind, "Errore durante l'elaborazione")
+        if kind in titoli:
+            titolo, testo = titoli[kind], (msg or "")[:200]
+        elif any(x in low for x in ("503", "unavailable", "high demand", "overloaded")):
+            titolo = "Google è sovraccarico in questo momento"
+            testo = ("I server di Gemini sono molto richiesti adesso: è un intoppo temporaneo, "
+                     "non un problema della tua lezione. Aspetta qualche minuto e premi «Riprova» "
+                     "sulla scheda: il lavoro già fatto è salvato e riparte da dove si era fermato.")
+        elif "429" in low or "resource_exhausted" in low or "rate limit" in low:
+            titolo = "Troppe richieste in questo momento"
+            testo = ("Gemini sta limitando le richieste (troppe in poco tempo). Aspetta un minuto "
+                     "e premi «Riprova» sulla scheda: riprende da dove era.")
+        elif any(x in low for x in ("timed out", "timeout", "connection", "getaddrinfo",
+                                     "temporary failure", "network", "ssl", "urlopen")):
+            titolo = "Problema di connessione"
+            testo = ("Sembra un problema di rete. Controlla la connessione e premi «Riprova» "
+                     "sulla scheda per riprendere.")
+        else:
+            titolo, testo = "Errore durante l'elaborazione", (msg or "")[:200]
         self._js("appErrore(" + json.dumps(key) + "," +
-                 json.dumps(titolo) + "," + json.dumps((msg or "")[:200]) + ")")
+                 json.dumps(titolo) + "," + json.dumps(testo) + ")")
 
 
 # --- Controllo runtime WebView2 -------------------------------------------

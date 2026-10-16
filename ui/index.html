@@ -156,6 +156,8 @@ body{margin:0;background:var(--app);color:var(--fg);font-family:var(--font);line
 .qprog,.qactions{display:none}
 .qitem[data-state="running"] .qprog{display:block;margin-top:11px}
 .qitem[data-state="done"] .qactions,.qitem[data-state="error"] .qactions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:11px}
+.act-riprova{display:none}
+.qitem[data-state="error"] .act-riprova{display:inline-flex}
 .qitem[data-state="running"] .qdel,.qitem[data-state="done"] .qdel,.qitem[data-state="error"] .qdel{display:none}
 .qitem[data-state="running"] .qbadge,.qitem[data-state="done"] .qbadge,.qitem[data-state="error"] .qbadge{display:none}
 .qcancel{display:none}
@@ -556,7 +558,7 @@ var I18N = {
     't.updCheckFailTitle':'Controllo non riuscito','t.updCheckFailDesc':'Non riesco a controllare ora (connessione?). Riprova.',
     'set.delete':'Elimina chiave','close':'Chiudi','edit':'Modifica','save':'Salva',
     'badge.file':'File','badge.link':'Link','badge.webex':'Webex',
-    'card.del':'Togli dalla coda','card.save':'Salva…','card.open':'Apri cartella',
+    'card.del':'Togli dalla coda','card.save':'Salva…','card.open':'Apri cartella','card.retry':'Riprova',
     'card.trash':'Elimina e svuota la cache',
     'phase.0':'Estrazione audio','phase.1':'Trascrizione','phase.2':'Pulizia','phase.3':'Traduzione',
     'hide':'Nascondi','starting':'Avvio…','canceling':'Annullo…',
@@ -642,7 +644,7 @@ var I18N = {
     't.updCheckFailTitle':'Check failed','t.updCheckFailDesc':'Can\'t check right now (connection?). Try again.',
     'set.delete':'Delete key','close':'Close','edit':'Edit','save':'Save',
     'badge.file':'File','badge.link':'Link','badge.webex':'Webex',
-    'card.del':'Remove from queue','card.save':'Save…','card.open':'Open folder',
+    'card.del':'Remove from queue','card.save':'Save…','card.open':'Open folder','card.retry':'Retry',
     'card.trash':'Delete and clear the cache',
     'phase.0':'Audio extraction','phase.1':'Transcription','phase.2':'Cleanup','phase.3':'Translation',
     'hide':'Hide','starting':'Starting…','canceling':'Canceling…',
@@ -976,6 +978,7 @@ function costruisciCard(name, sub, type, path){
     '<div class="qprog"><div class="qbar"><i></i></div><div class="qstatus"></div></div>'+
     '<div class="qactions">'+
       '<span class="qdone"></span>'+
+      '<button class="btn primary mini act-riprova" data-i18n="card.retry" onclick="riprovaCard(this)">'+t('card.retry')+'</button>'+
       '<button class="btn primary mini act-salva" data-i18n="card.save" onclick="salvaCard(this)">'+t('card.save')+'</button>'+
       '<button class="btn ghost mini act-apri" data-i18n="card.open" onclick="apriCartellaCard(this)">'+t('card.open')+'</button>'+
       '<button class="qtrash" data-i18n-title="card.trash" title="'+t('card.trash')+'" onclick="eliminaCard(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>'+
@@ -1312,6 +1315,19 @@ function rimuoviCard(btn){
   // annulla(path) e' un no-op sicuro se la lezione non e' in un batch attivo.
   if(api() && p) api().annulla(p);
   li.remove(); aggiornaSezioni();
+}
+/* Riprova una lezione fallita: la riporta "da trascrivere" e rilancia. Il lavoro gia'
+   fatto e' in cache, quindi riprende da dove si era fermata (rifa' solo i blocchi mancanti). */
+function riprovaCard(btn){
+  var li = btn.closest('.qitem'); if(!li) return;
+  li.dataset.state = 'queued';
+  li.classList.remove('canceling');
+  li.querySelector('.qicon').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+icons[li.dataset.type]+'</svg>';
+  var st = li.querySelector('.qstatus'); if(st) st.textContent = '';
+  var bar = li.querySelector('.qbar i'); if(bar) bar.style.width = '2%';
+  var todo = document.getElementById('queue-todo'); todo.insertBefore(li, todo.firstChild);
+  aggiornaSezioni();
+  avvia();     // raccoglie le schede "da trascrivere" (inclusa questa) e riparte
 }
 function salvaCard(btn){ var p = btn.closest('.qitem').dataset.path; if(api()) api().salva(p); }
 function apriCartellaCard(btn){ var p = btn.closest('.qitem').dataset.path; if(api()) api().apri_cartella(p); }
