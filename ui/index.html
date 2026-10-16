@@ -255,6 +255,10 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
 .set-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .set-tools .btn{font-size:12.5px}
 
+.langtoggle{display:inline-flex;border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-right:8px}
+.langtoggle button{border:0;background:transparent;color:var(--muted);font:600 12.5px/1 inherit;padding:7px 11px;cursor:pointer;letter-spacing:.3px}
+.langtoggle button+button{border-left:1px solid var(--border)}
+.langtoggle button.on{background:var(--accent);color:var(--accent-ink)}
 @media (max-width:760px){ .cols{grid-template-columns:1fr} }
 @media (max-width:560px){ .body{padding:18px} .langs{grid-template-columns:1fr} .tabs button span{display:none} .quota{display:none} }
 </style>
@@ -267,51 +271,55 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
     Trascrivi Lezioni
   </div>
   <div class="tbspace"></div>
-  <button class="iconbtn" id="btn-settings" title="Impostazioni" onclick="apriImpostazioni()" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
+  <div class="langtoggle" id="lang-toggle" title="Lingua / Language">
+    <button type="button" data-lang="it" onclick="setLang('it')">IT</button>
+    <button type="button" data-lang="en" onclick="setLang('en')">EN</button>
+  </div>
+  <button class="iconbtn" id="btn-settings" data-i18n-title="set.title" title="Impostazioni" onclick="apriImpostazioni()" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
 </div>
 
 <div class="body">
   <div class="cols" id="cols">
     <!-- SX: aggiungi lezioni + schede -->
     <div class="col">
-      <p class="step-label"><span class="n">1</span> Aggiungi lezioni</p>
+      <p class="step-label"><span class="n">1</span> <span data-i18n="s1">Aggiungi lezioni</span></p>
       <div class="tabs" role="tablist">
-        <button class="on" data-tab="file" onclick="setTab('file',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h4l2 3h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/></svg><span>File dal PC</span></button>
-        <button data-tab="link" onclick="setTab('link',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg><span>Link (Webex, YouTube…)</span></button>
+        <button class="on" data-tab="file" onclick="setTab('file',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h4l2 3h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/></svg><span data-i18n="tab.file">File dal PC</span></button>
+        <button data-tab="link" onclick="setTab('link',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg><span data-i18n="tab.link">Link (Webex, YouTube…)</span></button>
       </div>
 
       <div class="panel" id="panel-file">
         <div class="drop" id="drop" style="cursor:pointer" onclick="sfoglia()">
           <div class="cloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="m8 17 4 4 4-4"/><path d="M20 16.6A5 5 0 0 0 17 8h-1.3A8 8 0 1 0 4 15.9"/></svg></div>
-          <div class="big">Scegli audio o video dal PC</div>
-          <p>MP4, MP3, WAV, M4A… <a href="#" onclick="event.stopPropagation();sfoglia();return false">sfoglia il computer</a></p>
+          <div class="big" data-i18n="drop.big">Scegli audio o video dal PC</div>
+          <p data-i18n-html="drop.sub">MP4, MP3, WAV, M4A… <a href="#" onclick="event.stopPropagation();sfoglia();return false">sfoglia il computer</a></p>
         </div>
       </div>
 
       <div class="panel" id="panel-link" hidden>
         <div class="field">
-          <input class="input" id="link-in" oninput="onLinkInput(this.value)" placeholder="Incolla un link: Webex, YouTube, altro…">
-          <button class="btn primary" id="link-add" onclick="addLink()">Aggiungi</button>
+          <input class="input" id="link-in" oninput="onLinkInput(this.value)" data-i18n-ph="link.ph" placeholder="Incolla un link: Webex, YouTube, altro…">
+          <button class="btn primary" id="link-add" onclick="addLink()" data-i18n="link.add">Aggiungi</button>
         </div>
-        <p class="hint" id="link-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg> Webex, YouTube e altri siti. Scarichiamo solo l'audio.</p>
-        <p class="ob-err" id="link-need-cookie" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span>Per aggiungere una lezione Webex carica prima i cookie (qui sotto).</span></p>
+        <p class="hint" id="link-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg> <span data-i18n="link.hint">Webex, YouTube e altri siti. Scarichiamo solo l'audio.</span></p>
+        <p class="ob-err" id="link-need-cookie" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span data-i18n="link.needcookie">Per aggiungere una lezione Webex carica prima i cookie (qui sotto).</span></p>
 
         <div class="cookie" id="webex-cookie" hidden>
           <div class="row">
-            <span class="lab">🎥 Accesso Webex</span>
+            <span class="lab" data-i18n="webex.access">🎥 Accesso Webex</span>
             <div style="flex:1"></div>
-            <span class="chip" id="cookie-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> nessun file</span>
-            <button class="btn ghost" style="padding:7px 12px;font-size:13px" onclick="caricaCookies()">Carica cookies</button>
+            <span class="chip" id="cookie-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> <span data-i18n="chip.none">nessun file</span></span>
+            <button class="btn ghost" style="padding:7px 12px;font-size:13px" onclick="caricaCookies()" data-i18n="webex.load">Carica cookies</button>
           </div>
-          <button class="pwd-toggle" type="button" id="webex-pwd-toggle" onclick="mostraPwdWebex()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> La lezione ha una password?</button>
+          <button class="pwd-toggle" type="button" id="webex-pwd-toggle" onclick="mostraPwdWebex()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> <span data-i18n="webex.haspwd">La lezione ha una password?</span></button>
           <div class="field" id="webex-pwd-wrap" hidden style="margin-top:10px">
-            <input class="input" id="webex-pwd" type="text" placeholder="Password del video">
-            <button class="eye" type="button" title="Nessuna password / chiudi" onclick="resetPwdWebex()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <input class="input" id="webex-pwd" type="text" data-i18n-ph="webex.pwdph" placeholder="Password del video">
+            <button class="eye" type="button" data-i18n-title="webex.nopwd" title="Nessuna password / chiudi" onclick="resetPwdWebex()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
-          <p class="hint" style="margin-top:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Per scaricare una lezione Webex devi caricare i cookie. Li uso solo per il download, non li salvo: vanno ricaricati ogni volta (scadono in fretta).</p>
+          <p class="hint" style="margin-top:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> <span data-i18n="webex.hint">Per scaricare una lezione Webex devi caricare i cookie. Li uso solo per il download, non li salvo: vanno ricaricati ogni volta (scadono in fretta).</span></p>
           <div class="guide" style="margin-top:10px">
-            <button class="guide-h" type="button" onclick="toggleGuida(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg> Come scarico i cookie? <span>(~1 minuto)</span></button>
-            <ol class="guide-s" id="guide-cookies" hidden>
+            <button class="guide-h" type="button" onclick="toggleGuida(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg> <span data-i18n="webex.guideh">Come scarico i cookie?</span> <span data-i18n="webex.guidetime">(~1 minuto)</span></button>
+            <ol class="guide-s" id="guide-cookies" hidden data-i18n-html="webex.steps">
               <li>Installa l'estensione <a href="#" onclick="apriLink('https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc');return false">Get cookies.txt LOCALLY</a> (Chrome o Edge).</li>
               <li>Apri il <b>link della registrazione</b> Webex nel browser e <b>accedi</b> (aprila).</li>
               <li>Clicca l'<b>icona dell'estensione</b> e premi <b>Export</b>.</li>
@@ -322,13 +330,13 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
         </div>
       </div>
 
-      <p class="step-label" style="margin-top:28px"><span class="n">2</span> Lingue dei documenti</p>
-      <p class="substep">In uscita avrai <b>un documento Word per ogni lingua</b> qui sotto. La lingua parlata (italiano o inglese) la riconosco da sola.</p>
+      <p class="step-label" style="margin-top:28px"><span class="n">2</span> <span data-i18n="s2">Lingue dei documenti</span></p>
+      <p class="substep" data-i18n-html="s2.sub">In uscita avrai <b>un documento Word per ogni lingua</b> qui sotto. La lingua parlata (italiano o inglese) la riconosco da sola.</p>
       <div class="langpick">
         <div class="chips" id="chips"></div>
         <div class="srch">
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
-          <input id="langq" autocomplete="off" placeholder="Aggiungi una lingua…">
+          <input id="langq" autocomplete="off" data-i18n-ph="lang.addph" placeholder="Aggiungi una lingua…">
           <div class="menu" id="menu" hidden><ul id="menulist"></ul></div>
         </div>
       </div>
@@ -337,11 +345,11 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
 
       <button class="btn primary big" id="go" onclick="avvia()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 14 9-14 9V3Z"/></svg>
-        Avvia trascrizione
+        <span data-i18n="go">Avvia trascrizione</span>
       </button>
       <p class="quota-line" id="quota-line" title="">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-        Oggi puoi ancora trascrivere <b id="quota-n">—</b>
+        <span data-i18n="quota.pre">Oggi puoi ancora trascrivere</span> <b id="quota-n">—</b>
       </p>
     </div>
 
@@ -350,22 +358,22 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
       <div class="qwrap">
         <div class="qsec" id="sec-todo" hidden>
           <div class="qhead-row">
-            <p class="qhead">Da trascrivere <span class="qcount" id="count-todo"></span></p>
-            <button class="qclear" id="btn-annulla-tutto" hidden onclick="annullaTutto()" title="Ferma TUTTE le lezioni in corso, subito">Annulla tutto</button>
+            <p class="qhead"><span data-i18n="sec.todo">Da trascrivere</span> <span class="qcount" id="count-todo"></span></p>
+            <button class="qclear" id="btn-annulla-tutto" hidden onclick="annullaTutto()" data-i18n="cancelall" data-i18n-title="cancelall.title" title="Ferma TUTTE le lezioni in corso, subito">Annulla tutto</button>
           </div>
           <ul class="queue" id="queue-todo"></ul>
         </div>
         <div class="qsec" id="sec-done" hidden>
           <div class="qhead-row">
-            <p class="qhead">Completate <span class="qcount" id="count-done"></span></p>
-            <button class="qclear" onclick="svuotaCacheGlobale()" title="Elimina tutte le completate e svuota la cache">
+            <p class="qhead"><span data-i18n="sec.done">Completate</span> <span class="qcount" id="count-done"></span></p>
+            <button class="qclear" onclick="svuotaCacheGlobale()" data-i18n-title="clear.title" title="Elimina tutte le completate e svuota la cache">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-              Svuota
+              <span data-i18n="clear">Svuota</span>
             </button>
           </div>
           <ul class="queue" id="queue-done"></ul>
         </div>
-        <p class="qempty" id="qempty">Nessuna lezione. Aggiungila dal pannello a sinistra.</p>
+        <p class="qempty" id="qempty" data-i18n="queue.empty">Nessuna lezione. Aggiungila dal pannello a sinistra.</p>
       </div>
     </div>
   </div>
@@ -373,18 +381,18 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
 
 <div class="overlay" id="ask-folder" hidden>
   <div class="modal" role="dialog" aria-modal="true">
-    <h3>Dove salvo i documenti?</h3>
-    <p>I file Word di tutte le lezioni di questa sessione finiranno in questa cartella.</p>
+    <h3 data-i18n="ask.title">Dove salvo i documenti?</h3>
+    <p data-i18n="ask.body">I file Word di tutte le lezioni di questa sessione finiranno in questa cartella.</p>
     <div class="pick" id="pick-row">
       <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h4l2 3h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/></svg></span>
       <span class="pt"><div class="p1" id="pick-title">Nessuna cartella scelta</div><div class="p2" id="pick-path">Premi "Scegli cartella…"</div></span>
-      <button class="btn ghost mini" onclick="scegliCartellaModal()">Scegli cartella…</button>
+      <button class="btn ghost mini" onclick="scegliCartellaModal()" data-i18n="pick.choose">Scegli cartella…</button>
     </div>
     <div class="row-btn">
-      <button class="linklike" onclick="avviaSenzaCartella()">Salvo a mano dopo</button>
+      <button class="linklike" onclick="avviaSenzaCartella()" data-i18n="ask.manual">Salvo a mano dopo</button>
       <span class="grow"></span>
-      <button class="btn ghost" onclick="chiudiAsk()">Annulla</button>
-      <button class="btn primary" id="ask-go" onclick="confermaAvvio()" disabled>Avvia</button>
+      <button class="btn ghost" onclick="chiudiAsk()" data-i18n="cancel">Annulla</button>
+      <button class="btn primary" id="ask-go" onclick="confermaAvvio()" disabled data-i18n="start">Avvia</button>
     </div>
   </div>
 </div>
@@ -395,7 +403,7 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
     <p id="cf-msg"></p>
     <div class="row-btn">
       <span class="grow"></span>
-      <button class="btn ghost" onclick="chiudiConferma()">Annulla</button>
+      <button class="btn ghost" onclick="chiudiConferma()" data-i18n="cancel">Annulla</button>
       <button class="btn danger" id="cf-ok" onclick="eseguiConferma()">Conferma</button>
     </div>
   </div>
@@ -403,16 +411,16 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
 
 <div class="overlay" id="onboarding" hidden>
   <div class="modal" role="dialog" aria-modal="true" style="max-width:500px">
-    <h3>Benvenuto 👋</h3>
-    <p>Per trascrivere le lezioni serve una chiave API di Google Gemini (gratuita). La incolli una volta sola: resta salvata in modo sicuro sul tuo computer (Gestore Credenziali di Windows), mai in un file.</p>
+    <h3 data-i18n="ob.welcome">Benvenuto 👋</h3>
+    <p data-i18n="ob.body">Per trascrivere le lezioni serve una chiave API di Google Gemini (gratuita). La incolli una volta sola: resta salvata in modo sicuro sul tuo computer (Gestore Credenziali di Windows), mai in un file.</p>
     <div class="field">
-      <input class="input" id="ob-key" type="password" placeholder="Incolla qui la tua chiave API">
-      <button class="eye" type="button" title="Mostra" onclick="toggleKey('ob-key',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <input class="input" id="ob-key" type="password" data-i18n-ph="ob.keyph" placeholder="Incolla qui la tua chiave API">
+      <button class="eye" type="button" data-i18n-title="show" title="Mostra" onclick="toggleKey('ob-key',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
     </div>
     <p class="ob-err" id="ob-err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span id="ob-err-t"></span></p>
     <div class="guide">
-      <button class="guide-h open" type="button" onclick="toggleGuida(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg> Non ce l'hai? Come creare una chiave <span>(gratis, ~1 minuto)</span></button>
-      <ol class="guide-s" id="guide-steps">
+      <button class="guide-h open" type="button" onclick="toggleGuida(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg> <span data-i18n="ob.guideh">Non ce l'hai? Come creare una chiave</span> <span data-i18n="ob.guidetime">(gratis, ~1 minuto)</span></button>
+      <ol class="guide-s" id="guide-steps" data-i18n-html="ob.steps">
         <li>Apri <a href="#" onclick="apriLink('https://aistudio.google.com/apikey');return false">Google AI Studio</a> e accedi col tuo account Google.</li>
         <li>In alto a destra clicca <b>Crea chiave API</b>.</li>
         <li>Dai un <b>nome</b> alla chiave (va bene quello già proposto, <i>Gemini API Key</i>).</li>
@@ -423,42 +431,42 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
     </div>
     <div class="row-btn" style="margin-top:18px">
       <span class="grow"></span>
-      <button class="btn primary" id="ob-go" onclick="salvaChiaveOnboarding()">Salva e continua</button>
+      <button class="btn primary" id="ob-go" onclick="salvaChiaveOnboarding()" data-i18n="ob.save">Salva e continua</button>
     </div>
   </div>
 </div>
 
 <div class="overlay" id="settings" hidden>
   <div class="modal" role="dialog" aria-modal="true">
-    <h3>Impostazioni</h3>
-    <p>La tua chiave API di Google Gemini, salvata in modo sicuro sul PC.</p>
+    <h3 data-i18n="set.title">Impostazioni</h3>
+    <p data-i18n="set.body">La tua chiave API di Google Gemini, salvata in modo sicuro sul PC.</p>
     <div class="pick chosen">
       <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.5 12.5 7-7M17 7l1.5 1.5M14 10l1.5 1.5"/></svg></span>
-      <span class="pt"><div class="p1">Chiave salvata</div><div class="p2" id="set-preview">—</div></span>
+      <span class="pt"><div class="p1" data-i18n="set.keysaved">Chiave salvata</div><div class="p2" id="set-preview">—</div></span>
     </div>
     <div id="set-edit" hidden>
       <div class="field">
-        <input class="input" id="set-key" type="password" placeholder="Incolla la nuova chiave…">
-        <button class="eye" type="button" title="Mostra" onclick="toggleKey('set-key',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <input class="input" id="set-key" type="password" data-i18n-ph="set.keyph" placeholder="Incolla la nuova chiave…">
+        <button class="eye" type="button" data-i18n-title="show" title="Mostra" onclick="toggleKey('set-key',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
       </div>
       <p class="ob-err" id="set-err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span id="set-err-t"></span></p>
     </div>
     <div class="set-extra">
       <div class="set-line">
-        <span class="set-lab">Versione app</span>
+        <span class="set-lab" data-i18n="set.version">Versione app</span>
         <span class="set-val" id="set-version">—</span>
       </div>
       <div class="set-tools">
-        <button class="btn ghost" id="btn-segnala" hidden onclick="segnalaProblema()">Segnala un problema</button>
-        <button class="btn ghost" id="btn-ytdlp" onclick="aggiornaYtdlp(this)">Aggiorna motore di download</button>
+        <button class="btn ghost" id="btn-segnala" hidden onclick="segnalaProblema()" data-i18n="set.report">Segnala un problema</button>
+        <button class="btn ghost" id="btn-ytdlp" onclick="aggiornaYtdlp(this)" data-i18n="set.ytdlp">Aggiorna motore di download</button>
       </div>
     </div>
     <div class="row-btn" style="margin-top:18px">
-      <button class="linklike danger" onclick="eliminaChiave()">Elimina chiave</button>
+      <button class="linklike danger" onclick="eliminaChiave()" data-i18n="set.delete">Elimina chiave</button>
       <span class="grow"></span>
-      <button class="btn ghost" onclick="chiudiImpostazioni()">Chiudi</button>
-      <button class="btn ghost" id="set-mod" onclick="modificaChiave()">Modifica</button>
-      <button class="btn primary" id="set-save" onclick="salvaChiaveImpostazioni()" hidden>Salva</button>
+      <button class="btn ghost" onclick="chiudiImpostazioni()" data-i18n="close">Chiudi</button>
+      <button class="btn ghost" id="set-mod" onclick="modificaChiave()" data-i18n="edit">Modifica</button>
+      <button class="btn primary" id="set-save" onclick="salvaChiaveImpostazioni()" hidden data-i18n="save">Salva</button>
     </div>
   </div>
 </div>
@@ -466,12 +474,208 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
 <div class="toasts" id="toasts"></div>
 
 <script>
-/* le 5 fasi: devono combaciare con FASI in config.py */
-var FASI = ["Scarico l'audio","Trascrivo il parlato","Pulisco il testo","Traduco","Creo i documenti"];
-// Testo PULITO mostrato sotto la barra mentre una fase e' in corso (sostantivi, niente dettagli
-// tecnici). Fase 4 (documenti) = "" : e' istantanea, non serve scrivere nulla. Il rilevamento
-// lingua cade nel passaggio trascrizione->pulizia: non avendo etichetta propria, resta "Trascrizione".
-var ETICHETTE_FASE = ["Estrazione audio","Trascrizione","Pulizia","Traduzione",""];
+/* ===================== i18n: UI bilingue IT / EN =====================
+   Dizionario per chiavi + selettore in alto + scelta ricordata (localStorage).
+   La lingua della UI e' SEPARATA dalle lingue dei documenti (pannello 2).
+   NB: solo index.html; i rari messaggi d'errore generati da Python restano in IT. */
+var I18N = {
+  it: {
+    'set.title':'Impostazioni',
+    's1':'Aggiungi lezioni','tab.file':'File dal PC','tab.link':'Link (Webex, YouTube…)',
+    'drop.big':'Scegli audio o video dal PC',
+    'drop.sub':'MP4, MP3, WAV, M4A… <a href="#" onclick="event.stopPropagation();sfoglia();return false">sfoglia il computer</a>',
+    'link.ph':'Incolla un link: Webex, YouTube, altro…','link.add':'Aggiungi',
+    'link.hint':'Webex, YouTube e altri siti. Scarichiamo solo l\'audio.',
+    'link.needcookie':'Per aggiungere una lezione Webex carica prima i cookie (qui sotto).',
+    'webex.access':'🎥 Accesso Webex','webex.load':'Carica cookies',
+    'webex.haspwd':'La lezione ha una password?','webex.pwdph':'Password del video',
+    'webex.nopwd':'Nessuna password / chiudi',
+    'webex.hint':'Per scaricare una lezione Webex devi caricare i cookie. Li uso solo per il download, non li salvo: vanno ricaricati ogni volta (scadono in fretta).',
+    'webex.guideh':'Come scarico i cookie?','webex.guidetime':'(~1 minuto)',
+    'webex.steps':'<li>Installa l\'estensione <a href="#" onclick="apriLink(\'https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc\');return false">Get cookies.txt LOCALLY</a> (Chrome o Edge).</li><li>Apri il <b>link della registrazione</b> Webex nel browser e <b>accedi</b> (aprila).</li><li>Clicca l\'<b>icona dell\'estensione</b> e premi <b>Export</b>.</li><li>Parte il download di un file (di solito chiamato come il sito, es. <i>politecnicomilano.webex.com_cookies.txt</i>).</li><li>Torna qui, premi <b>Carica cookies</b> e scegli quel file.</li>',
+    's2':'Lingue dei documenti',
+    's2.sub':'In uscita avrai <b>un documento Word per ogni lingua</b> qui sotto. La lingua parlata (italiano o inglese) la riconosco da sola.',
+    'lang.addph':'Aggiungi una lingua…','go':'Avvia trascrizione',
+    'quota.pre':'Oggi puoi ancora trascrivere',
+    'quota.title':'{u} di {cap} richieste di trascrizione usate oggi · ~{m} min a richiesta',
+    'pick.chosen':'Cartella scelta',
+    'sec.todo':'Da trascrivere','cancelall':'Annulla tutto',
+    'cancelall.title':'Ferma TUTTE le lezioni in corso, subito',
+    'sec.done':'Completate','clear':'Svuota','clear.title':'Elimina tutte le completate e svuota la cache',
+    'queue.empty':'Nessuna lezione. Aggiungila dal pannello a sinistra.',
+    'ask.title':'Dove salvo i documenti?',
+    'ask.body':'I file Word di tutte le lezioni di questa sessione finiranno in questa cartella.',
+    'pick.none':'Nessuna cartella scelta','pick.nonesub':'Premi "Scegli cartella…"',
+    'pick.choose':'Scegli cartella…','ask.manual':'Salvo a mano dopo',
+    'cancel':'Annulla','start':'Avvia','confirm':'Conferma',
+    'ob.welcome':'Benvenuto 👋',
+    'ob.body':'Per trascrivere le lezioni serve una chiave API di Google Gemini (gratuita). La incolli una volta sola: resta salvata in modo sicuro sul tuo computer (Gestore Credenziali di Windows), mai in un file.',
+    'ob.keyph':'Incolla qui la tua chiave API','show':'Mostra',
+    'ob.guideh':'Non ce l\'hai? Come creare una chiave','ob.guidetime':'(gratis, ~1 minuto)',
+    'ob.steps':'<li>Apri <a href="#" onclick="apriLink(\'https://aistudio.google.com/apikey\');return false">Google AI Studio</a> e accedi col tuo account Google.</li><li>In alto a destra clicca <b>Crea chiave API</b>.</li><li>Dai un <b>nome</b> alla chiave (va bene quello già proposto, <i>Gemini API Key</i>).</li><li>Scegli un <b>progetto</b>: se non ne hai, clicca <b>Crea progetto</b>, dagli un nome e crealo; se ne hai già uno, selezionalo.</li><li>Conferma: la chiave appare a schermo — <b>copiala</b>.</li><li>Torna qui, <b>incollala</b> nel campo qui sopra e premi <b>Salva e continua</b>.</li>',
+    'ob.save':'Salva e continua',
+    'set.body':'La tua chiave API di Google Gemini, salvata in modo sicuro sul PC.',
+    'set.keysaved':'Chiave salvata','set.keyph':'Incolla la nuova chiave…',
+    'set.version':'Versione app','set.report':'Segnala un problema','set.ytdlp':'Aggiorna motore di download',
+    'set.delete':'Elimina chiave','close':'Chiudi','edit':'Modifica','save':'Salva',
+    'badge.file':'File','badge.link':'Link','badge.webex':'Webex',
+    'card.del':'Togli dalla coda','card.save':'Salva…','card.open':'Apri cartella',
+    'card.trash':'Elimina e svuota la cache',
+    'phase.0':'Estrazione audio','phase.1':'Trascrizione','phase.2':'Pulizia','phase.3':'Traduzione',
+    'hide':'Nascondi','starting':'Avvio…','canceling':'Annullo…',
+    'cancel.one':'Annullo questa lezione… finisco il blocco in corso','cancel.all':'Annullo tutto…',
+    'updating':'Aggiornamento…','verifying':'Verifico…',
+    'sub.willdownload':'scaricherò l\'audio','lang.notfound':'Nessuna lingua trovata',
+    'btn.needcookie':'Carica prima i cookie di Webex (qui sotto)',
+    't.previewTitle':'Anteprima nel browser','t.previewSaveKey':'Apri l\'app vera per salvare la chiave.',
+    't.pasteKey':'Incolla la tua chiave.','t.keyInvalid':'Chiave non valida.',
+    't.verifyErr':'Errore imprevisto nella verifica. Riprova.',
+    't.readyTitle':'Tutto pronto','t.readyDesc':'Chiave salvata. Ora puoi trascrivere le lezioni.',
+    't.savedTitle':'Salvata','t.savedDesc':'Chiave aggiornata.',
+    't.delKeyTitle':'Eliminare la chiave?','t.delKeyBody':'Tolgo la chiave API dal computer. Senza chiave non puoi trascrivere finché non ne inserisci un\'altra. Le lezioni già fatte non vengono toccate.',
+    't.delete':'Elimina','t.keyDeletedTitle':'Chiave eliminata','t.keyDeletedDesc':'Inserisci una nuova chiave per continuare.',
+    't.alreadyTitle':'Già in lista','t.alreadyDesc':'Questa lezione è già nella coda o tra le completate.',
+    't.previewFiles':'Per scegliere i file apri l\'app vera (python app.py).',
+    't.nothingTitle':'Niente da trascrivere','t.nothingDesc':'Aggiungi almeno una lezione (o sono già tutte fatte).',
+    't.chooseLangTitle':'Scegli una lingua','t.chooseLangDesc':'Seleziona almeno una lingua per i documenti.',
+    't.pyTitle':'Anteprima nel browser','t.pyDesc':'Python non collegato: apri l\'app vera.',
+    't.needCookiesTitle':'Servono i cookie','t.needCookiesDesc':'Carica i cookie di Webex prima di aggiungere la lezione (qui sotto).',
+    't.cookiesOkTitle':'Cookie caricati','t.cookiesOkDesc':'Ora posso scaricare le lezioni da Webex.',
+    'chip.none':'nessun file','chip.loaded':'cookie caricati','chip.invalid':'non valido',
+    't.cookieBadTitle':'Cookie non validi','t.cookieBadDesc':'Il file non va bene.',
+    't.loadCookiesPreview':'Apri l\'app vera per caricare i cookie.',
+    't.manualTitle':'Salvataggio a mano','t.manualDesc':'Userai il pulsante Salva… su ogni lezione.',
+    't.canceledTitle':'Annullato','t.canceledDesc':'Il lavoro è stato interrotto. Le lezioni non finite sono tornate in coda (riprendono da dove erano).',
+    't.busyTitle':'Un attimo','t.busyDesc':'Sto già trascrivendo: aspetta che finisca prima di avviare di nuovo.',
+    't.savedOkTitle':'Salvato','t.savedOneDesc':'Documento salvato.','t.savedNDesc':'{n} documenti salvati nella cartella scelta.',
+    't.clearDoneTitle':'Svuotare le lezioni completate?','t.clearDoneBody':'Tolgo le lezioni completate da questa lista e cancello la cache interna dell\'app. I documenti Word che hai già salvato nelle tue cartelle NON vengono toccati.','t.clearDoneLabel':'Svuota',
+    't.doneTitle':'Fatto','t.doneDesc':'Lista completate svuotata. I tuoi file salvati sono al sicuro.',
+    't.removedTitle':'Eliminata','t.removedDesc':'Tolta dalla lista e dalla cache. Il Word che hai salvato resta dov\'è.',
+    't.notAvailTitle':'Non disponibile','t.cacheManageDesc':'Apri l\'app vera per gestire la cache.',
+    't.reportNotAvail':'Apri l\'app vera per segnalare.',
+    't.formNotAvailTitle':'Form non disponibile','t.formNotAvailDesc':'La segnalazione non è ancora configurata.',
+    't.updNotAvail':'Apri l\'app vera per aggiornare.',
+    't.updateTitle':'Aggiornamento disponibile','t.updateDesc':'È uscita la versione {ver}. Scaricala per avere correzioni e novità.',
+    't.download':'Scarica','t.later':'Più tardi',
+    't.incompleteTitle':'Completata con parti mancanti','t.incompleteDesc':'Alcune parti non è stato possibile elaborarle: nel Word trovi un segnaposto ⚠️ dove manca il testo.',
+    'parts.some':'alcune parti non elaborate','parts.n':'{n} parti non elaborate',
+    'saved.in':'✓ salvato in {c}','saved.cardN':'{n} documenti salvati','saved.card1':'documento salvato','saved.cardIn':' in {c}',
+    'quota.zero':'0 min (torna domani)'
+  },
+  en: {
+    'set.title':'Settings',
+    's1':'Add lectures','tab.file':'File from PC','tab.link':'Link (Webex, YouTube…)',
+    'drop.big':'Choose audio or video from your PC',
+    'drop.sub':'MP4, MP3, WAV, M4A… <a href="#" onclick="event.stopPropagation();sfoglia();return false">browse your computer</a>',
+    'link.ph':'Paste a link: Webex, YouTube, other…','link.add':'Add',
+    'link.hint':'Webex, YouTube and other sites. We only download the audio.',
+    'link.needcookie':'To add a Webex lecture, load the cookies first (below).',
+    'webex.access':'🎥 Webex access','webex.load':'Load cookies',
+    'webex.haspwd':'Does the lecture have a password?','webex.pwdph':'Video password',
+    'webex.nopwd':'No password / close',
+    'webex.hint':'To download a Webex lecture you must load the cookies. I only use them for the download and never save them: reload them each time (they expire quickly).',
+    'webex.guideh':'How do I get the cookies?','webex.guidetime':'(~1 minute)',
+    'webex.steps':'<li>Install the <a href="#" onclick="apriLink(\'https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc\');return false">Get cookies.txt LOCALLY</a> extension (Chrome or Edge).</li><li>Open the Webex <b>recording link</b> in the browser and <b>sign in</b> (open it).</li><li>Click the <b>extension icon</b> and press <b>Export</b>.</li><li>A file download starts (usually named after the site, e.g. <i>politecnicomilano.webex.com_cookies.txt</i>).</li><li>Come back here, press <b>Load cookies</b> and pick that file.</li>',
+    's2':'Document languages',
+    's2.sub':'You will get <b>one Word document per language</b> below. I detect the spoken language (Italian or English) on my own.',
+    'lang.addph':'Add a language…','go':'Start transcription',
+    'quota.pre':'Today you can still transcribe',
+    'quota.title':'{u} of {cap} transcription requests used today · ~{m} min per request',
+    'pick.chosen':'Folder selected',
+    'sec.todo':'To transcribe','cancelall':'Cancel all',
+    'cancelall.title':'Stop ALL running lectures, right now',
+    'sec.done':'Completed','clear':'Clear','clear.title':'Remove all completed and clear the cache',
+    'queue.empty':'No lectures yet. Add one from the panel on the left.',
+    'ask.title':'Where do I save the documents?',
+    'ask.body':'The Word files of every lecture in this session will go in this folder.',
+    'pick.none':'No folder selected','pick.nonesub':'Press "Choose folder…"',
+    'pick.choose':'Choose folder…','ask.manual':'I\'ll save manually later',
+    'cancel':'Cancel','start':'Start','confirm':'Confirm',
+    'ob.welcome':'Welcome 👋',
+    'ob.body':'To transcribe lectures you need a (free) Google Gemini API key. You paste it once: it stays saved securely on your computer (Windows Credential Manager), never in a file.',
+    'ob.keyph':'Paste your API key here','show':'Show',
+    'ob.guideh':'Don\'t have one? How to create a key','ob.guidetime':'(free, ~1 minute)',
+    'ob.steps':'<li>Open <a href="#" onclick="apriLink(\'https://aistudio.google.com/apikey\');return false">Google AI Studio</a> and sign in with your Google account.</li><li>Top right, click <b>Create API key</b>.</li><li>Give the key a <b>name</b> (the suggested one is fine, <i>Gemini API Key</i>).</li><li>Pick a <b>project</b>: if you have none, click <b>Create project</b>, name it and create it; otherwise select one.</li><li>Confirm: the key appears on screen — <b>copy it</b>.</li><li>Come back here, <b>paste it</b> in the field above and press <b>Save and continue</b>.</li>',
+    'ob.save':'Save and continue',
+    'set.body':'Your Google Gemini API key, saved securely on your PC.',
+    'set.keysaved':'Key saved','set.keyph':'Paste the new key…',
+    'set.version':'App version','set.report':'Report a problem','set.ytdlp':'Update download engine',
+    'set.delete':'Delete key','close':'Close','edit':'Edit','save':'Save',
+    'badge.file':'File','badge.link':'Link','badge.webex':'Webex',
+    'card.del':'Remove from queue','card.save':'Save…','card.open':'Open folder',
+    'card.trash':'Delete and clear the cache',
+    'phase.0':'Audio extraction','phase.1':'Transcription','phase.2':'Cleanup','phase.3':'Translation',
+    'hide':'Hide','starting':'Starting…','canceling':'Canceling…',
+    'cancel.one':'Canceling this lecture… finishing the current block','cancel.all':'Canceling all…',
+    'updating':'Updating…','verifying':'Verifying…',
+    'sub.willdownload':'I\'ll download the audio','lang.notfound':'No language found',
+    'btn.needcookie':'Load the Webex cookies first (below)',
+    't.previewTitle':'Browser preview','t.previewSaveKey':'Open the real app to save the key.',
+    't.pasteKey':'Paste your key.','t.keyInvalid':'Invalid key.',
+    't.verifyErr':'Unexpected error during verification. Try again.',
+    't.readyTitle':'All set','t.readyDesc':'Key saved. You can now transcribe lectures.',
+    't.savedTitle':'Saved','t.savedDesc':'Key updated.',
+    't.delKeyTitle':'Delete the key?','t.delKeyBody':'I remove the API key from the computer. Without a key you can\'t transcribe until you enter another one. Lectures already done are untouched.',
+    't.delete':'Delete','t.keyDeletedTitle':'Key deleted','t.keyDeletedDesc':'Enter a new key to continue.',
+    't.alreadyTitle':'Already listed','t.alreadyDesc':'This lecture is already in the queue or among the completed ones.',
+    't.previewFiles':'To choose files, open the real app (python app.py).',
+    't.nothingTitle':'Nothing to transcribe','t.nothingDesc':'Add at least one lecture (or they\'re all done already).',
+    't.chooseLangTitle':'Choose a language','t.chooseLangDesc':'Select at least one language for the documents.',
+    't.pyTitle':'Browser preview','t.pyDesc':'Python not connected: open the real app.',
+    't.needCookiesTitle':'Cookies needed','t.needCookiesDesc':'Load the Webex cookies before adding the lecture (below).',
+    't.cookiesOkTitle':'Cookies loaded','t.cookiesOkDesc':'Now I can download lectures from Webex.',
+    'chip.none':'no file','chip.loaded':'cookies loaded','chip.invalid':'invalid',
+    't.cookieBadTitle':'Invalid cookies','t.cookieBadDesc':'The file is not valid.',
+    't.loadCookiesPreview':'Open the real app to load cookies.',
+    't.manualTitle':'Manual saving','t.manualDesc':'You\'ll use the Save… button on each lecture.',
+    't.canceledTitle':'Canceled','t.canceledDesc':'The work was stopped. Unfinished lectures went back to the queue (they resume where they left off).',
+    't.busyTitle':'One moment','t.busyDesc':'I\'m already transcribing: wait for it to finish before starting again.',
+    't.savedOkTitle':'Saved','t.savedOneDesc':'Document saved.','t.savedNDesc':'{n} documents saved in the chosen folder.',
+    't.clearDoneTitle':'Clear the completed lectures?','t.clearDoneBody':'I remove the completed lectures from this list and clear the app\'s internal cache. The Word documents you already saved in your folders are NOT touched.','t.clearDoneLabel':'Clear',
+    't.doneTitle':'Done','t.doneDesc':'Completed list cleared. Your saved files are safe.',
+    't.removedTitle':'Removed','t.removedDesc':'Removed from the list and the cache. The Word you saved stays where it is.',
+    't.notAvailTitle':'Not available','t.cacheManageDesc':'Open the real app to manage the cache.',
+    't.reportNotAvail':'Open the real app to report.',
+    't.formNotAvailTitle':'Form not available','t.formNotAvailDesc':'Reporting is not configured yet.',
+    't.updNotAvail':'Open the real app to update.',
+    't.updateTitle':'Update available','t.updateDesc':'Version {ver} is out. Download it for fixes and new features.',
+    't.download':'Download','t.later':'Later',
+    't.incompleteTitle':'Completed with missing parts','t.incompleteDesc':'Some parts could not be processed: in the Word you\'ll find a ⚠️ placeholder where the text is missing.',
+    'parts.some':'some parts not processed','parts.n':'{n} parts not processed',
+    'saved.in':'✓ saved in {c}','saved.cardN':'{n} documents saved','saved.card1':'document saved','saved.cardIn':' in {c}',
+    'quota.zero':'0 min (come back tomorrow)'
+  }
+};
+var LANG = 'it';
+try { var _sl = localStorage.getItem('ui_lang'); if(_sl === 'it' || _sl === 'en') LANG = _sl; } catch(e){}
+function t(key, vars){
+  var s = (I18N[LANG] && I18N[LANG][key] != null) ? I18N[LANG][key] : (I18N.it[key] != null ? I18N.it[key] : key);
+  if(vars){ for(var k in vars){ s = s.replace(new RegExp('\\{'+k+'\\}','g'), vars[k]); } }
+  return s;
+}
+function applyI18n(){
+  document.documentElement.lang = LANG;
+  Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function(el){ el.textContent = t(el.getAttribute('data-i18n')); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-html]'), function(el){ el.innerHTML = t(el.getAttribute('data-i18n-html')); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-ph]'), function(el){ el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph'))); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-title]'), function(el){ el.setAttribute('title', t(el.getAttribute('data-i18n-title'))); });
+  var tg = document.getElementById('lang-toggle');
+  if(tg) Array.prototype.forEach.call(tg.querySelectorAll('button'), function(b){ b.classList.toggle('on', b.getAttribute('data-lang') === LANG); });
+}
+function setLang(l){
+  if(l !== 'it' && l !== 'en') return;
+  LANG = l;
+  try { localStorage.setItem('ui_lang', l); } catch(e){}
+  applyI18n();
+  _renderChips(); if(!document.getElementById('menu').hidden) _renderMenu();
+  if(_lastQuota) appQuota(_lastQuota);
+}
+/* etichetta "N documento/i" dipendente dalla lingua (plurale IT vs EN) */
+function docLabel(n){ return LANG === 'it' ? (n + ' document' + (n===1?'o':'i')) : (n + ' document' + (n===1?'':'s')); }
+
+/* Le etichette pulite delle fasi mostrate sotto la barra sono in I18N ('phase.0'..'phase.3');
+   la fase 4 (documenti) non mostra testo (istantanea). Il rilevamento lingua cade nel passaggio
+   trascrizione->pulizia: senza etichetta propria resta "Trascrizione". Vedi appFase. */
 
 /* ponte verso Python (iniettato in modo asincrono) */
 var pyPronto = false;
@@ -509,7 +713,7 @@ function toggleKey(id, btn){
   var nasc = inp.type === 'password';
   inp.type = nasc ? 'text' : 'password';
   btn.innerHTML = nasc ? SVG_EYE_OFF : SVG_EYE;
-  btn.title = nasc ? 'Nascondi' : 'Mostra';
+  btn.title = nasc ? t('hide') : t('show');
 }
 function apriLink(url){ if(api()) api().apri_link(url); }
 function toggleGuida(btn){
@@ -525,18 +729,18 @@ function mostraErr(wrap, txt, msg){
   if(t) t.textContent = msg || ''; if(w) w.hidden = !msg;
 }
 function salvaChiaveConVerifica(valore, btn, wrapErr, txtErr, onOk){
-  if(!api()){ toast('warn','Anteprima nel browser','Apri l\'app vera per salvare la chiave.'); return; }
+  if(!api()){ toast('warn',t('t.previewTitle'),t('t.previewSaveKey')); return; }
   var k = (valore||'').trim();
   mostraErr(wrapErr, txtErr, '');
-  if(!k){ mostraErr(wrapErr, txtErr, 'Incolla la tua chiave.'); return; }
-  btn.disabled = true; var old = btn.textContent; btn.textContent = 'Verifico…';
+  if(!k){ mostraErr(wrapErr, txtErr, t('t.pasteKey')); return; }
+  btn.disabled = true; var old = btn.textContent; btn.textContent = t('verifying');
   Promise.resolve(api().salva_chiave(k)).then(function(res){
     btn.disabled = false; btn.textContent = old;
     if(res && res.ok){ _keyPreview = res.preview || ''; onOk(); }
-    else { mostraErr(wrapErr, txtErr, (res && res.errore) || 'Chiave non valida.'); }
+    else { mostraErr(wrapErr, txtErr, (res && res.errore) || t('t.keyInvalid')); }
   }).catch(function(){      // non lasciare MAI il bottone bloccato su "Verifico…"
     btn.disabled = false; btn.textContent = old;
-    mostraErr(wrapErr, txtErr, 'Errore imprevisto nella verifica. Riprova.');
+    mostraErr(wrapErr, txtErr, t('t.verifyErr'));
   });
 }
 function salvaChiaveOnboarding(){
@@ -544,7 +748,7 @@ function salvaChiaveOnboarding(){
     'ob-err','ob-err-t', function(){
       document.getElementById('onboarding').hidden = true;
       document.getElementById('btn-settings').hidden = false;
-      toast('ok','Tutto pronto','Chiave salvata. Ora puoi trascrivere le lezioni.');
+      toast('ok',t('t.readyTitle'),t('t.readyDesc'));
     });
 }
 function apriImpostazioni(){
@@ -575,13 +779,13 @@ function salvaChiaveImpostazioni(){
       document.getElementById('set-edit').hidden = true;
       document.getElementById('set-mod').hidden = false;
       document.getElementById('set-save').hidden = true;
-      toast('ok','Salvata','Chiave aggiornata.');
+      toast('ok',t('t.savedTitle'),t('t.savedDesc'));
     });
 }
 function eliminaChiave(){
-  conferma('Eliminare la chiave?',
-    'Tolgo la chiave API dal computer. Senza chiave non puoi trascrivere finché non ne inserisci un\'altra. Le lezioni già fatte non vengono toccate.',
-    'Elimina',
+  conferma(t('t.delKeyTitle'),
+    t('t.delKeyBody'),
+    t('t.delete'),
     function(){
       if(!api()) return;
       Promise.resolve(api().elimina_chiave()).then(function(){
@@ -590,7 +794,7 @@ function eliminaChiave(){
         document.getElementById('btn-settings').hidden = true;
         document.getElementById('ob-key').value = '';
         document.getElementById('onboarding').hidden = false;
-        toast('ok','Chiave eliminata','Inserisci una nuova chiave per continuare.');
+        toast('ok',t('t.keyDeletedTitle'),t('t.keyDeletedDesc'));
       });
     });
 }
@@ -603,26 +807,27 @@ function setTab(t, btn){
 }
 /* selettore lingue: lista chiusa, si apre al clic; chip per quelle scelte */
 var LINGUE_UI=[
-  {c:'it',f:'🇮🇹',n:'Italiano'},{c:'en',f:'🇬🇧',n:'Inglese'},{c:'es',f:'🇪🇸',n:'Spagnolo'},
-  {c:'fr',f:'🇫🇷',n:'Francese'},{c:'de',f:'🇩🇪',n:'Tedesco'},{c:'pt',f:'🇵🇹',n:'Portoghese'},
-  {c:'ar',f:'🇸🇦',n:'Arabo'},{c:'zh',f:'🇨🇳',n:'Cinese (semplificato)'},{c:'ja',f:'🇯🇵',n:'Giapponese'},
-  {c:'ko',f:'🇰🇷',n:'Coreano'},{c:'ru',f:'🇷🇺',n:'Russo'},{c:'hi',f:'🇮🇳',n:'Hindi'},
-  {c:'nl',f:'🇳🇱',n:'Olandese'},{c:'pl',f:'🇵🇱',n:'Polacco'},{c:'tr',f:'🇹🇷',n:'Turco'},
-  {c:'uk',f:'🇺🇦',n:'Ucraino'},{c:'el',f:'🇬🇷',n:'Greco'},{c:'sv',f:'🇸🇪',n:'Svedese'},
-  {c:'ro',f:'🇷🇴',n:'Rumeno'},{c:'cs',f:'🇨🇿',n:'Ceco'},{c:'he',f:'🇮🇱',n:'Ebraico'},
-  {c:'fa',f:'🇮🇷',n:'Persiano'},{c:'id',f:'🇮🇩',n:'Indonesiano'},{c:'vi',f:'🇻🇳',n:'Vietnamita'},
-  {c:'th',f:'🇹🇭',n:'Thailandese'},{c:'da',f:'🇩🇰',n:'Danese'},{c:'fi',f:'🇫🇮',n:'Finlandese'},
-  {c:'no',f:'🇳🇴',n:'Norvegese'},{c:'hu',f:'🇭🇺',n:'Ungherese'},{c:'bg',f:'🇧🇬',n:'Bulgaro'},
-  {c:'hr',f:'🇭🇷',n:'Croato'},{c:'sk',f:'🇸🇰',n:'Slovacco'},{c:'sr',f:'🇷🇸',n:'Serbo'},
-  {c:'bn',f:'🇧🇩',n:'Bengalese'},{c:'ur',f:'🇵🇰',n:'Urdu'},{c:'ms',f:'🇲🇾',n:'Malese'}
+  {c:'it',f:'🇮🇹',n:'Italiano',e:'Italian'},{c:'en',f:'🇬🇧',n:'Inglese',e:'English'},{c:'es',f:'🇪🇸',n:'Spagnolo',e:'Spanish'},
+  {c:'fr',f:'🇫🇷',n:'Francese',e:'French'},{c:'de',f:'🇩🇪',n:'Tedesco',e:'German'},{c:'pt',f:'🇵🇹',n:'Portoghese',e:'Portuguese'},
+  {c:'ar',f:'🇸🇦',n:'Arabo',e:'Arabic'},{c:'zh',f:'🇨🇳',n:'Cinese (semplificato)',e:'Chinese (Simplified)'},{c:'ja',f:'🇯🇵',n:'Giapponese',e:'Japanese'},
+  {c:'ko',f:'🇰🇷',n:'Coreano',e:'Korean'},{c:'ru',f:'🇷🇺',n:'Russo',e:'Russian'},{c:'hi',f:'🇮🇳',n:'Hindi',e:'Hindi'},
+  {c:'nl',f:'🇳🇱',n:'Olandese',e:'Dutch'},{c:'pl',f:'🇵🇱',n:'Polacco',e:'Polish'},{c:'tr',f:'🇹🇷',n:'Turco',e:'Turkish'},
+  {c:'uk',f:'🇺🇦',n:'Ucraino',e:'Ukrainian'},{c:'el',f:'🇬🇷',n:'Greco',e:'Greek'},{c:'sv',f:'🇸🇪',n:'Svedese',e:'Swedish'},
+  {c:'ro',f:'🇷🇴',n:'Rumeno',e:'Romanian'},{c:'cs',f:'🇨🇿',n:'Ceco',e:'Czech'},{c:'he',f:'🇮🇱',n:'Ebraico',e:'Hebrew'},
+  {c:'fa',f:'🇮🇷',n:'Persiano',e:'Persian'},{c:'id',f:'🇮🇩',n:'Indonesiano',e:'Indonesian'},{c:'vi',f:'🇻🇳',n:'Vietnamita',e:'Vietnamese'},
+  {c:'th',f:'🇹🇭',n:'Thailandese',e:'Thai'},{c:'da',f:'🇩🇰',n:'Danese',e:'Danish'},{c:'fi',f:'🇫🇮',n:'Finlandese',e:'Finnish'},
+  {c:'no',f:'🇳🇴',n:'Norvegese',e:'Norwegian'},{c:'hu',f:'🇭🇺',n:'Ungherese',e:'Hungarian'},{c:'bg',f:'🇧🇬',n:'Bulgaro',e:'Bulgarian'},
+  {c:'hr',f:'🇭🇷',n:'Croato',e:'Croatian'},{c:'sk',f:'🇸🇰',n:'Slovacco',e:'Slovak'},{c:'sr',f:'🇷🇸',n:'Serbo',e:'Serbian'},
+  {c:'bn',f:'🇧🇩',n:'Bengalese',e:'Bengali'},{c:'ur',f:'🇵🇰',n:'Urdu',e:'Urdu'},{c:'ms',f:'🇲🇾',n:'Malese',e:'Malay'}
 ];
 var _sel=['it','en'];
+function lgName(L){ return (LANG==='en' && L.e) ? L.e : L.n; }
 function _lgInfo(c){ for(var i=0;i<LINGUE_UI.length;i++){ if(LINGUE_UI[i].c===c) return LINGUE_UI[i]; } return {c:c,f:'🏳️',n:c}; }
 function linguaScelte(){ return _sel.slice(); }
 function _renderChips(){
   var box=document.getElementById('chips'); if(!box) return;
   box.innerHTML = _sel.map(function(c){ var L=_lgInfo(c);
-    return '<span class="lchip"><span>'+L.f+'</span> '+L.n+' <span class="x" data-rm="'+c+'">'
+    return '<span class="lchip"><span>'+L.f+'</span> '+lgName(L)+' <span class="x" data-rm="'+c+'">'
       +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span></span>';
   }).join('');
   Array.prototype.forEach.call(box.querySelectorAll('[data-rm]'), function(x){
@@ -635,12 +840,13 @@ function _renderMenu(){
   var q=(document.getElementById('langq').value||'').trim().toLowerCase();
   var h='';
   LINGUE_UI.forEach(function(L){
-    if(q && L.n.toLowerCase().indexOf(q)<0) return;
+    var nm=lgName(L);
+    if(q && nm.toLowerCase().indexOf(q)<0 && L.n.toLowerCase().indexOf(q)<0) return;
     var on=_sel.indexOf(L.c)>=0;
-    h+='<li data-add="'+L.c+'" class="'+(on?'has':'')+'"><span class="fl">'+L.f+'</span> '+L.n
+    h+='<li data-add="'+L.c+'" class="'+(on?'has':'')+'"><span class="fl">'+L.f+'</span> '+nm
       +' <span class="add">'+(on?'✓':'+')+'</span></li>';
   });
-  ul.innerHTML = h || '<li class="mempty">Nessuna lingua trovata</li>';
+  ul.innerHTML = h || '<li class="mempty">'+t('lang.notfound')+'</li>';
   Array.prototype.forEach.call(ul.querySelectorAll('[data-add]'), function(li){
     li.onclick=function(){ var c=li.getAttribute('data-add');
       if(_sel.indexOf(c)>=0){ _sel=_sel.filter(function(k){return k!==c}); } else { _sel.push(c); }
@@ -672,7 +878,7 @@ function aggiornaBtnAggiungi(){
   var btn = document.getElementById('link-add'); if(!btn) return;
   var blocca = _inputWebex() && !_cookiesOk;        // Webex senza cookie: non si aggiunge
   btn.disabled = blocca;
-  btn.title = blocca ? 'Carica prima i cookie di Webex (qui sotto)' : '';
+  btn.title = blocca ? t('btn.needcookie') : '';
   var nota = document.getElementById('link-need-cookie'); if(nota) nota.hidden = !blocca;
 }
 
@@ -682,7 +888,6 @@ var icons = {
   link:'<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
   webex:'<path d="m15 10 5-3v10l-5-3"/><rect x="3" y="6" width="12" height="12" rx="2"/>'
 };
-var badges = { file:'File', link:'Link', webex:'Webex' };
 var SVG_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 var SVG_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>';
 
@@ -705,16 +910,16 @@ function costruisciCard(name, sub, type, path){
     '<div class="qtop">'+
       '<span class="qicon qicon-type"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+icons[type]+'</svg></span>'+
       '<div class="qmeta"><div class="qname">'+esc(name)+'</div><div class="qsub">'+esc(sub)+'</div></div>'+
-      '<span class="qbadge">'+badges[type]+'</span>'+
-      '<button class="qdel" title="Togli dalla coda" onclick="rimuoviCard(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'+
-      '<button class="qcancel" onclick="annulla(this)">Annulla</button>'+
+      '<span class="qbadge" data-i18n="badge.'+type+'">'+t('badge.'+type)+'</span>'+
+      '<button class="qdel" data-i18n-title="card.del" title="'+t('card.del')+'" onclick="rimuoviCard(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'+
+      '<button class="qcancel" onclick="annulla(this)">'+t('cancel')+'</button>'+
     '</div>'+
     '<div class="qprog"><div class="qbar"><i></i></div><div class="qstatus"></div></div>'+
     '<div class="qactions">'+
       '<span class="qdone"></span>'+
-      '<button class="btn primary mini act-salva" onclick="salvaCard(this)">Salva…</button>'+
-      '<button class="btn ghost mini act-apri" onclick="apriCartellaCard(this)">Apri cartella</button>'+
-      '<button class="qtrash" title="Elimina e svuota la cache" onclick="eliminaCard(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>'+
+      '<button class="btn primary mini act-salva" data-i18n="card.save" onclick="salvaCard(this)">'+t('card.save')+'</button>'+
+      '<button class="btn ghost mini act-apri" data-i18n="card.open" onclick="apriCartellaCard(this)">'+t('card.open')+'</button>'+
+      '<button class="qtrash" data-i18n-title="card.trash" title="'+t('card.trash')+'" onclick="eliminaCard(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>'+
     '</div>';
   return li;
 }
@@ -723,7 +928,7 @@ function addItem(name, sub, type, path){
   if(path){   // niente doppioni: due schede con lo stesso path incrocerebbero gli aggiornamenti
     var ex = document.querySelectorAll('.qitem');
     for(var i=0;i<ex.length;i++){ if(ex[i].dataset.path === path || ex[i].dataset.src === path){
-      toast('warn','Già in lista','Questa lezione è già nella coda o tra le completate.');
+      toast('warn',t('t.alreadyTitle'),t('t.alreadyDesc'));
       return;
     }}
   }
@@ -739,16 +944,16 @@ function addDoneCard(info){
   li.querySelector('.qicon').innerHTML = SVG_OK;
   if(info.cartella){
     li.dataset.cartella = info.cartella;
-    li.querySelector('.qdone').textContent = '✓ salvato in ' + info.cartella;
+    li.querySelector('.qdone').textContent = t('saved.in', {c: info.cartella});
   } else {
-    li.querySelector('.qdone').textContent = '✓ ' + info.documenti + ' document' + (info.documenti===1?'o':'i') + ' (' + info.lingue + ')';
+    li.querySelector('.qdone').textContent = '✓ ' + docLabel(info.documenti) + ' (' + info.lingue + ')';
   }
   var done = document.getElementById('queue-done');
   done.insertBefore(li, done.firstChild);
   aggiornaSezioni();
 }
 function sfoglia(){
-  if(!api()){ toast('warn','Anteprima nel browser','Per scegliere i file apri l\'app vera (python app.py).'); return; }
+  if(!api()){ toast('warn',t('t.previewTitle'),t('t.previewFiles')); return; }
   api().scegli_file();
 }
 function appFileScelti(files){ (files||[]).forEach(function(f){ addItem(f.nome, f.sub, 'file', f.path); }); }
@@ -756,10 +961,10 @@ function addLink(){
   var el = document.getElementById('link-in'); var v = el.value.trim();
   if(!v){ el.focus(); return; }
   var isWebex = /webex\.com/i.test(v);
-  if(isWebex && !_cookiesOk){ toast('warn','Servono i cookie','Carica i cookie di Webex prima di aggiungere la lezione (qui sotto).'); return; }
+  if(isWebex && !_cookiesOk){ toast('warn',t('t.needCookiesTitle'),t('t.needCookiesDesc')); return; }
   var pwd = isWebex ? (document.getElementById('webex-pwd')||{}).value : '';
   pwd = (pwd||'').trim();
-  addItem(v.length>46? v.slice(0,46)+'…' : v, (isWebex?'Webex':'Link')+' · scaricherò l\'audio', isWebex?'webex':'link', v);
+  addItem(v.length>46? v.slice(0,46)+'…' : v, (isWebex?t('badge.webex'):t('badge.link'))+' · '+t('sub.willdownload'), isWebex?'webex':'link', v);
   var li = cardByPath(v);
   if(li && pwd) li.dataset.password = pwd;
   aggiornaInfoLink(v);                       // prova a leggere titolo + durata
@@ -785,36 +990,36 @@ function aggiornaInfoLink(url){
       var n = li.querySelector('.qname'); if(n) n.textContent = info.titolo;
     }
     var s = li.querySelector('.qsub');
-    if(s) s.textContent = (info.webex?'Webex':'Link') + (info.durata_min ? ' · '+info.durata_min+' min' : ' · scaricherò l\'audio');
+    if(s) s.textContent = (info.webex?t('badge.webex'):t('badge.link')) + (info.durata_min ? ' · '+info.durata_min+' min' : ' · '+t('sub.willdownload'));
   });
 }
 function caricaCookies(){
   if(api()) api().carica_cookies();
-  else toast('warn','Anteprima nel browser','Apri l\'app vera per caricare i cookie.');
+  else toast('warn',t('t.previewTitle'),t('t.loadCookiesPreview'));
 }
 function appCookies(st){
   var chip = document.getElementById('cookie-chip'); if(!chip) return;
   if(st && st.reset){
     chip.className = 'chip';
-    chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> nessun file';
+    chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> '+t('chip.none');
     chip.title = '';
     _cookiesOk = false; aggiornaBtnAggiungi();
     return;
   }
   if(st && st.ok){
     chip.className = 'chip ok';
-    chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> cookie caricati';
+    chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> '+t('chip.loaded');
     chip.title = st.nome || '';
     _cookiesOk = true; aggiornaBtnAggiungi();
-    toast('ok','Cookie caricati','Ora posso scaricare le lezioni da Webex.');
+    toast('ok',t('t.cookiesOkTitle'),t('t.cookiesOkDesc'));
     Array.from(document.querySelectorAll('.qitem')).forEach(function(li){   // ora posso leggere i titoli webex
       if(li.dataset.type==='webex' && li.dataset.state==='queued') aggiornaInfoLink(li.dataset.path);
     });
   } else {
     chip.className = 'chip err';
-    chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg> non valido';
+    chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg> '+t('chip.invalid');
     _cookiesOk = false; aggiornaBtnAggiungi();
-    toast('err','Cookie non validi', (st && st.errore) || 'Il file non va bene.');
+    toast('err',t('t.cookieBadTitle'), (st && st.errore) || t('t.cookieBadDesc'));
   }
 }
 function cardByPath(path){
@@ -833,10 +1038,10 @@ function queuedCards(){
 var _pendingLezioni = null, _pendingLingue = null, _cartellaScelta = '';
 function avvia(){
   var pend = queuedCards();
-  if(pend.length === 0){ toast('warn','Niente da trascrivere','Aggiungi almeno una lezione (o sono già tutte fatte).'); return; }
+  if(pend.length === 0){ toast('warn',t('t.nothingTitle'),t('t.nothingDesc')); return; }
   var lingue = linguaScelte();
-  if(lingue.length === 0){ toast('warn','Scegli una lingua','Seleziona almeno una lingua per i documenti.'); return; }
-  if(!api()){ toast('warn','Anteprima nel browser','Python non collegato: apri l\'app vera.'); return; }
+  if(lingue.length === 0){ toast('warn',t('t.chooseLangTitle'),t('t.chooseLangDesc')); return; }
+  if(!api()){ toast('warn',t('t.pyTitle'),t('t.pyDesc')); return; }
   _pendingLezioni = pend.map(function(li){ return { nome: li.dataset.name, tipo: li.dataset.type, path: li.dataset.path, password: li.dataset.password || '' }; });
   _pendingLingue = lingue;
   // apre la NOSTRA finestra: spiega la scelta cartella, poi il picker nativo
@@ -847,8 +1052,8 @@ function avvia(){
 function resetAsk(){
   _cartellaScelta = '';
   document.getElementById('pick-row').classList.remove('chosen');
-  document.getElementById('pick-title').textContent = 'Nessuna cartella scelta';
-  document.getElementById('pick-path').textContent = 'Premi "Scegli cartella…"';
+  document.getElementById('pick-title').textContent = t('pick.none');
+  document.getElementById('pick-path').textContent = t('pick.nonesub');
   document.getElementById('ask-go').disabled = true;
 }
 function scegliCartellaModal(){ if(api()) api().scegli_cartella(); }
@@ -856,7 +1061,7 @@ function appCartellaScelta(path){
   if(!path){ return; }   // picker annullato: la nostra finestra resta aperta per riprovare
   _cartellaScelta = path;
   document.getElementById('pick-row').classList.add('chosen');
-  document.getElementById('pick-title').textContent = 'Cartella scelta';
+  document.getElementById('pick-title').textContent = t('pick.chosen');
   document.getElementById('pick-path').textContent = path;
   document.getElementById('ask-go').disabled = false;
 }
@@ -868,7 +1073,7 @@ function confermaAvvio(){ partiBatch(_cartellaScelta || ''); }
 function avviaSenzaCartella(){ partiBatch(''); }
 function partiBatch(cartella){
   document.getElementById('ask-folder').hidden = true;
-  if(!cartella){ toast('info','Salvataggio a mano','Userai il pulsante Salva… su ogni lezione.'); }
+  if(!cartella){ toast('info',t('t.manualTitle'),t('t.manualDesc')); }
   api().avvia({ lezioni: _pendingLezioni, lingue: _pendingLingue, corso: '', cartella: cartella });
 }
 function _segnaCanceling(li, msg){
@@ -876,17 +1081,17 @@ function _segnaCanceling(li, msg){
   _stopCreep(li);
   li.classList.add('canceling');
   var st = li.querySelector('.qstatus'); if(st) st.textContent = msg;
-  var btn = li.querySelector('.qcancel'); if(btn){ btn.disabled = true; btn.textContent = 'Annullo…'; }
+  var btn = li.querySelector('.qcancel'); if(btn){ btn.disabled = true; btn.textContent = t('canceling'); }
 }
 function annulla(el){          // annulla SOLO questa lezione (mirato)
   var li = (el && el.closest) ? el.closest('.qitem') : null;
   if(!li) return;
-  _segnaCanceling(li, 'Annullo questa lezione… finisco il blocco in corso');
+  _segnaCanceling(li, t('cancel.one'));
   if(api()){ api().annulla(li.dataset.path); }
 }
 function annullaTutto(){       // ferma TUTTE le lezioni in corso, all'istante
   var items = document.querySelectorAll('.qitem[data-state="running"]');
-  for(var i=0;i<items.length;i++){ _segnaCanceling(items[i], 'Annullo tutto…'); }
+  for(var i=0;i<items.length;i++){ _segnaCanceling(items[i], t('cancel.all')); }
   if(api()){ api().annulla_tutto(); }
 }
 function aggiornaBtnAnnullaTutto(){
@@ -900,9 +1105,9 @@ function appLavoroPartito(path){
   li.dataset.state = 'running';
   li.classList.remove('canceling');
   li._sawProg = false; _stopCreep(li);
-  var btn = li.querySelector('.qcancel'); if(btn){ btn.disabled = false; btn.textContent = 'Annulla'; }
+  var btn = li.querySelector('.qcancel'); if(btn){ btn.disabled = false; btn.textContent = t('cancel'); }
   var bar = li.querySelector('.qbar i'); if(bar) bar.style.width = '2%';
-  var st = li.querySelector('.qstatus'); if(st) st.textContent = 'Avvio…';
+  var st = li.querySelector('.qstatus'); if(st) st.textContent = t('starting');
   aggiornaBtnAnnullaTutto();
   var r = li.getBoundingClientRect();          // scrolla SOLO se fuori vista (niente salti con più lezioni)
   if(r.top < 0 || r.bottom > (window.innerHeight || document.documentElement.clientHeight)){
@@ -938,7 +1143,7 @@ function _armCreep(li, soffitto){
 function appFase(path, i, stato){
   var li = cardByPath(path); if(!li) return;
   if(stato === 'attiva'){
-    var st = li.querySelector('.qstatus'); if(st) st.textContent = (ETICHETTE_FASE[i] || '');
+    var st = li.querySelector('.qstatus'); if(st) st.textContent = (i>=0 && i<=3) ? t('phase.'+i) : '';
     // Fase 0. File locale: estrazione = una chiamata senza % -> striscia fino a ~13% poi salta.
     // Link/Webex: il DOWNLOAD dà progresso reale -> soffitto basso (4%), così la barra avanza
     // davvero col download invece di sedersi sul "finto". Le altre fasi: niente creep.
@@ -966,16 +1171,15 @@ function appLezioneFatta(path, info){
   var li = cardByPath(path); if(!li) return;
   _stopCreep(li);
   li.dataset.state = 'done';
-  var base = '✓ ' + info.documenti + ' document' + (info.documenti===1?'o':'i') + ' (' + info.lingue + ')';
+  var base = '✓ ' + docLabel(info.documenti) + ' (' + info.lingue + ')';
   // Lezione completata ma con parti NON elaborate (Gemini ha rifiutato/fallito alcuni
   // blocchi dopo i tentativi): avviso l'utente. Nel Word, al posto di ogni blocco, c'e'
   // gia' un marcatore visibile "[⚠️ ERRORE CRITICO: ...]".
   if(info.completo === false){
     var n = info.blocchi_falliti || 0;
     li.querySelector('.qicon').innerHTML = SVG_WARN;
-    li.querySelector('.qdone').textContent = base + ' — ' + (n ? n + ' parti non elaborate' : 'alcune parti non elaborate');
-    toast('warn', 'Completata con parti mancanti',
-          (n ? n + ' blocco/i ' : 'Alcune parti ') + 'non è stato possibile elaborarli: nel Word trovi un segnaposto ⚠️ dove manca il testo.');
+    li.querySelector('.qdone').textContent = base + ' — ' + (n ? t('parts.n',{n:n}) : t('parts.some'));
+    toast('warn', t('t.incompleteTitle'), t('t.incompleteDesc'));
   } else {
     li.querySelector('.qicon').innerHTML = SVG_OK;
     li.querySelector('.qdone').textContent = base;
@@ -997,14 +1201,16 @@ function appErrore(path, titolo, msg){
   }
   toast('err', titolo, msg);
 }
+var _lastQuota = null;
 function appQuota(info){
   if(!info) return;
+  _lastQuota = info;
   var el = document.getElementById('quota-n'); if(el) el.textContent = formattaDurata(info.minuti);
-  var line = document.getElementById('quota-line'); if(line) line.title = info.usate + ' di ' + info.cap + ' richieste di trascrizione usate oggi · ~' + (info.min_per_richiesta || 10) + ' min a richiesta';
+  var line = document.getElementById('quota-line'); if(line) line.title = t('quota.title', {u: info.usate, cap: info.cap, m: (info.min_per_richiesta || 10)});
 }
 function formattaDurata(min){
   min = Math.max(0, min|0);
-  if(min === 0) return '0 min (torna domani)';
+  if(min === 0) return t('quota.zero');
   if(min < 60) return '~' + min + ' min';
   var h = Math.floor(min/60), m = min%60;
   return '~' + h + ' h' + (m ? ' ' + m + ' min' : '');
@@ -1024,19 +1230,19 @@ function appAnnullato(key){
       li.dataset.state = 'queued';
       var bar = li.querySelector('.qbar i'); if(bar) bar.style.width='2%';
       var st = li.querySelector('.qstatus'); if(st) st.textContent = '';
-      var btn = li.querySelector('.qcancel'); if(btn){ btn.disabled = false; btn.textContent = 'Annulla'; }
+      var btn = li.querySelector('.qcancel'); if(btn){ btn.disabled = false; btn.textContent = t('cancel'); }
     }
   }
   aggiornaSezioni();
-  toast('warn','Annullato','Il lavoro è stato interrotto. Le lezioni non finite sono tornate in coda (riprendono da dove erano).');
+  toast('warn',t('t.canceledTitle'),t('t.canceledDesc'));
 }
 function appLavoroFinito(){ document.getElementById('go').disabled = false; aggiornaBtnAnnullaTutto(); }
-function appGiaInCorso(){ document.getElementById('go').disabled = true; toast('warn','Un attimo','Sto già trascrivendo: aspetta che finisca prima di avviare di nuovo.'); }
+function appGiaInCorso(){ document.getElementById('go').disabled = true; toast('warn',t('t.busyTitle'),t('t.busyDesc')); }
 function appSalvato(path, info){
   var li = cardByPath(path); if(!li) return;
   li.dataset.cartella = info.cartella || '';
-  li.querySelector('.qdone').textContent = '✓ ' + (info.n>1 ? info.n+' documenti salvati' : 'documento salvato') + (info.cartella ? ' in ' + info.cartella : '');
-  toast('ok','Salvato', info.n>1 ? (info.n+' documenti salvati nella cartella scelta.') : 'Documento salvato.');
+  li.querySelector('.qdone').textContent = '✓ ' + (info.n>1 ? t('saved.cardN',{n:info.n}) : t('saved.card1')) + (info.cartella ? t('saved.cardIn',{c:info.cartella}) : '');
+  toast('ok',t('t.savedOkTitle'), info.n>1 ? t('t.savedNDesc',{n:info.n}) : t('t.savedOneDesc'));
 }
 
 /* --- azioni sulle schede --- */
@@ -1056,7 +1262,7 @@ function eliminaCard(btn){
   if(api()){
     Promise.resolve(api().elimina(p)).then(function(){
       li.remove(); aggiornaSezioni();
-      toast('ok','Eliminata','Tolta dalla lista e dalla cache. Il Word che hai salvato resta dov\'è.');
+      toast('ok',t('t.removedTitle'),t('t.removedDesc'));
     });
   } else { li.remove(); aggiornaSezioni(); }
 }
@@ -1064,7 +1270,7 @@ var _cfYes = null;
 function conferma(titolo, msg, etichetta, onYes){
   document.getElementById('cf-title').textContent = titolo;
   document.getElementById('cf-msg').textContent = msg;
-  document.getElementById('cf-ok').textContent = etichetta || 'Conferma';
+  document.getElementById('cf-ok').textContent = etichetta || t('confirm');
   _cfYes = onYes;
   document.getElementById('ask-confirm').hidden = false;
 }
@@ -1072,11 +1278,11 @@ function chiudiConferma(){ document.getElementById('ask-confirm').hidden = true;
 function eseguiConferma(){ var f = _cfYes; chiudiConferma(); if(f) f(); }
 
 function svuotaCacheGlobale(){
-  if(!api()){ toast('warn','Non disponibile','Apri l\'app vera per gestire la cache.'); return; }
+  if(!api()){ toast('warn',t('t.notAvailTitle'),t('t.cacheManageDesc')); return; }
   conferma(
-    'Svuotare le lezioni completate?',
-    'Tolgo le lezioni completate da questa lista e cancello la cache interna dell\'app. I documenti Word che hai già salvato nelle tue cartelle NON vengono toccati.',
-    'Svuota',
+    t('t.clearDoneTitle'),
+    t('t.clearDoneBody'),
+    t('t.clearDoneLabel'),
     function(){
       Promise.resolve(api().svuota_cache()).then(function(){
         document.getElementById('queue-done').innerHTML = '';
@@ -1084,7 +1290,7 @@ function svuotaCacheGlobale(){
           if(li.dataset.state === 'error') li.remove();
         });
         aggiornaSezioni();
-        toast('ok','Fatto','Lista completate svuotata. I tuoi file salvati sono al sicuro.');
+        toast('ok',t('t.doneTitle'),t('t.doneDesc'));
       });
     });
 }
@@ -1105,14 +1311,14 @@ function toast(kind,title,desc){
 
 /* --- Impostazioni: segnalazione + aggiorna yt-dlp --- */
 function segnalaProblema(){
-  if(!api() || !api().apri_segnalazione){ toast('warn','Non disponibile','Apri l\'app vera per segnalare.'); return; }
+  if(!api() || !api().apri_segnalazione){ toast('warn',t('t.notAvailTitle'),t('t.reportNotAvail')); return; }
   Promise.resolve(api().apri_segnalazione()).then(function(r){
-    if(!r || !r.ok) toast('warn','Form non disponibile','La segnalazione non è ancora configurata.');
+    if(!r || !r.ok) toast('warn',t('t.formNotAvailTitle'),t('t.formNotAvailDesc'));
   });
 }
 function aggiornaYtdlp(btn){
-  if(!api() || !api().aggiorna_ytdlp){ toast('warn','Non disponibile','Apri l\'app vera per aggiornare.'); return; }
-  if(btn){ btn.disabled = true; var txt = btn.textContent; btn.textContent = 'Aggiornamento…';
+  if(!api() || !api().aggiorna_ytdlp){ toast('warn',t('t.notAvailTitle'),t('t.updNotAvail')); return; }
+  if(btn){ btn.disabled = true; var txt = btn.textContent; btn.textContent = t('updating');
     setTimeout(function(){ btn.disabled = false; btn.textContent = txt; }, 6000); }
   api().aggiorna_ytdlp();   // l'esito arriva via toast dal lato Python
 }
@@ -1124,10 +1330,10 @@ function appAggiornamento(ver, url){
   _updMostrato = true;
   var t = document.createElement('div'); t.className = 'toast ok';
   t.innerHTML = '<span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v4h-4"/></svg></span>'+
-    '<div class="tb"><div class="tt">Aggiornamento disponibile</div>'+
-    '<div class="td">È uscita la versione '+esc(ver)+'. Scaricala per avere correzioni e novità.</div>'+
-    '<div class="tact"><button class="btn primary">Scarica</button>'+
-    '<button class="btn ghost">Più tardi</button></div></div>'+
+    '<div class="tb"><div class="tt">'+esc(t('t.updateTitle'))+'</div>'+
+    '<div class="td">'+esc(t('t.updateDesc',{ver:ver}))+'</div>'+
+    '<div class="tact"><button class="btn primary">'+esc(t('t.download'))+'</button>'+
+    '<button class="btn ghost">'+esc(t('t.later'))+'</button></div></div>'+
     '<button class="tx" title="Chiudi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
   var btns = t.querySelectorAll('button');
   btns[0].onclick = function(){ if(api() && api().apri_link) api().apri_link(url); t.remove(); };
@@ -1137,6 +1343,7 @@ function appAggiornamento(ver, url){
 }
 
 aggiornaSezioni();
+applyI18n();
 </script>
 </body>
 </html>
