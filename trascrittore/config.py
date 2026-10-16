@@ -31,7 +31,9 @@ ASR_MODEL = "gemini-3.5-flash-lite"               # FASE 1 PRIMARIA: trascrive b
                                                   # allucinare/loopare/troncare un blocco → serve la guardia (transcribe.py).
 TRANSCRIBE_MODEL = "gemini-3.5-transcribe"        # trascrizione DEDICATA: usata SOLO come FALLBACK sui blocchi
                                                   # che falliscono la guardia 3 volte (affidabile, ma RPD 25).
-TEXT_MODEL = "gemini-3.1-flash-lite-preview"      # pulizia + traduzione del testo
+TEXT_MODEL = "gemini-3.1-flash-lite"              # pulizia + traduzione del testo (versione GA/stabile:
+#   era "...-preview", spostato alla GA il 2026-10-16 per non dipendere da un modello preview che Google
+#   depriorizza nelle giornate di carico. NON tocca la fedelta' della TRASCRIZIONE (ASR_MODEL a parte).
 # Tetto di token in USCITA per pulizia/traduzione. Va alzato: col default
 # (~8K token) un blocco grande verrebbe TRONCATO a meta' output (sembra un
 # riassunto ma e' un taglio tecnico). Misurato: a blocchi grandi flash-lite
