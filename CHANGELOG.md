@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.1
+- Risolto un problema per cui l'avviso di nuova versione poteva non comparire.
+
 ## 1.2.0
 - Interfaccia bilingue Italiano/Inglese e tema scuro.
 - Nuovo look (colore indaco, icona) e pannello Impostazioni rinnovato.

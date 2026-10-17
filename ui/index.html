@@ -1405,18 +1405,18 @@ var _updMostrato = false;
 function appAggiornamento(ver, url, force){
   if(_updMostrato && !force) return;   // auto: una volta per sessione. Manuale (force): sempre.
   _updMostrato = true;
-  var t = document.createElement('div'); t.className = 'toast ok';
-  t.innerHTML = '<span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v4h-4"/></svg></span>'+
+  var box = document.createElement('div'); box.className = 'toast ok';
+  box.innerHTML = '<span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v4h-4"/></svg></span>'+
     '<div class="tb"><div class="tt">'+esc(t('t.updateTitle'))+'</div>'+
     '<div class="td">'+esc(t('t.updateDesc',{ver:ver}))+'</div>'+
     '<div class="tact"><button class="btn primary">'+esc(t('t.download'))+'</button>'+
     '<button class="btn ghost">'+esc(t('t.later'))+'</button></div></div>'+
     '<button class="tx" title="Chiudi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
-  var btns = t.querySelectorAll('button');
-  btns[0].onclick = function(){ if(api() && api().apri_link) api().apri_link(url); t.remove(); };
-  btns[1].onclick = function(){ t.remove(); };
-  btns[2].onclick = function(){ t.remove(); };   // la "x"
-  document.getElementById('toasts').appendChild(t);
+  var btns = box.querySelectorAll('button');
+  btns[0].onclick = function(){ if(api() && api().apri_link) api().apri_link(url); box.remove(); };
+  btns[1].onclick = function(){ box.remove(); };
+  btns[2].onclick = function(){ box.remove(); };   // la "x"
+  document.getElementById('toasts').appendChild(box);
 }
 
 aggiornaSezioni();

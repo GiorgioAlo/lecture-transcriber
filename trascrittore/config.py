@@ -7,7 +7,7 @@ from __future__ import annotations
 
 # Versione dell'app (semver). La mostra la UI e serve al controllo aggiornamenti
 # (Step 3): viene confrontata col tag dell'ultima Release su GitHub.
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 
 # --- Aggiornamenti dell'app (Step 3) --------------------------------------
 # Repo PUBBLICO su cui stanno le Release (gli .exe nuovi). Finche' sono vuote la
