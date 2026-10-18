@@ -146,6 +146,7 @@ jobs:
   diagnostica-macos15:
     needs: build
     runs-on: macos-15
+    timeout-minutes: 15        # rete di sicurezza: Gatekeeper puo' far "appendere" open
     steps:
       - name: Scarica il .dmg costruito
         uses: actions/download-artifact@v4
@@ -169,8 +170,14 @@ jobs:
           echo "===== codesign: verifica profonda ====="; codesign --verify --deep --strict --verbose=4 "$APP"
           echo "===== Gatekeeper: stato del sistema ====="; spctl --status
           echo "===== Gatekeeper: giudizio sull'app in quarantena (spctl assess) ====="; spctl -a -t exec -vvv "$APP"
-          echo "===== Apertura come un doppio click (open) ====="; open "$APP"; echo "open exit=$?"
-          sleep 10
-          echo "===== L'app risulta in esecuzione dopo l'apertura? ====="; pgrep -fl "Trascrivi Lezioni" || echo "nessun processo trovato (non e' partita)"
+          # NB: con un'app non notarizzata in quarantena, 'open' su macOS nuovo RESTA
+          # APPESO in attesa di un'approvazione di sicurezza (= l'icona che rimbalza
+          # all'infinito che vede l'utente). Lo lanciamo in background con attesa limitata.
+          echo "===== Apertura come un doppio click (open), al massimo ~15s ====="
+          open "$APP" &
+          OPID=$!
+          sleep 15
+          echo "===== L'app risulta in esecuzione dopo l'apertura? ====="; pgrep -fl "Trascrivi Lezioni" || echo "nessun processo trovato (non e' partita = Gatekeeper l'ha bloccata)"
+          kill "$OPID" 2>/dev/null
           pkill -f "Trascrivi Lezioni" 2>/dev/null
           echo "(step diagnostico: non fa fallire il workflow)"; exit 0
