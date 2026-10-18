@@ -83,6 +83,33 @@ jobs:
           codesign --force --deep --sign - "packaging/dist-macos/Trascrivi Lezioni.app"
           codesign --verify --deep --strict --verbose=2 "packaging/dist-macos/Trascrivi Lezioni.app" || true
 
+      # Diagnostica: serve a capire perche' su qualche Mac l'app non si apre
+      # (icona che rimbalza all'infinito). Sonda architettura, firma, giudizio di
+      # Gatekeeper e un avvio reale. NON fa fallire il build (exit 0 finale).
+      - name: Diagnostica avvio e firma (non blocca il build)
+        run: |
+          set +e
+          APP="packaging/dist-macos/Trascrivi Lezioni.app"
+          BIN="$APP/Contents/MacOS/Trascrivi Lezioni"
+          echo "===== macOS del runner ====="; sw_vers
+          echo "===== Architettura dell'eseguibile (atteso: arm64) ====="; file "$BIN"; lipo -archs "$BIN"
+          echo "===== codesign: dettagli della firma ====="; codesign -dvvv "$APP"
+          echo "===== codesign: verifica profonda ====="; codesign --verify --deep --strict --verbose=4 "$APP"
+          echo "===== Gatekeeper: stato del sistema ====="; spctl --status
+          echo "===== Gatekeeper: giudizio sull'app (spctl assess) ====="; spctl -a -t exec -vvv "$APP"
+          echo "===== Test di AVVIO (exec diretto, al massimo 25s) ====="
+          "$BIN" > /tmp/applog.txt 2>&1 &
+          PID=$!
+          sleep 25
+          if kill -0 "$PID" 2>/dev/null; then
+            echo ">>> VIVO dopo 25s: a livello di CODICE l'app parte (nessun crash all'avvio)."
+            kill "$PID" 2>/dev/null
+          else
+            wait "$PID"; echo ">>> TERMINATO con codice $? entro 25s: possibile crash/kill all'avvio."
+          fi
+          echo "----- stdout/stderr dell'app -----"; cat /tmp/applog.txt
+          echo "(step diagnostico: non fa fallire il workflow)"; exit 0
+
       - name: Crea il .dmg
         run: |
           mkdir -p /tmp/dmgroot
@@ -110,3 +137,40 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${{ steps.tag.outputs.tag }}" "Trascrivi-Lezioni-macOS.dmg" --clobber
+
+  # Job di sola DIAGNOSTICA su macOS 15 (piu' vicino ai Mac nuovissimi, es. M4):
+  # scarica il .dmg appena costruito, lo monta, mette all'app la QUARANTENA come
+  # farebbe un vero download dal browser, e chiede a Gatekeeper il verdetto. Serve a
+  # capire il caso "l'icona rimbalza e l'app non si apre". Non allega/pubblica nulla
+  # e non fa fallire il build (il job 'build' non dipende da questo).
+  diagnostica-macos15:
+    needs: build
+    runs-on: macos-15
+    steps:
+      - name: Scarica il .dmg costruito
+        uses: actions/download-artifact@v4
+        with:
+          name: Trascrivi-Lezioni-macOS
+
+      - name: Simula un'app SCARICATA (quarantena) e interroga Gatekeeper
+        run: |
+          set +e
+          echo "===== macOS del runner ====="; sw_vers
+          hdiutil attach "Trascrivi-Lezioni-macOS.dmg" -mountpoint /tmp/dmg -nobrowse
+          mkdir -p /tmp/uut
+          cp -R "/tmp/dmg/Trascrivi Lezioni.app" /tmp/uut/
+          hdiutil detach /tmp/dmg
+          APP="/tmp/uut/Trascrivi Lezioni.app"
+          BIN="$APP/Contents/MacOS/Trascrivi Lezioni"
+          echo "===== Metto la QUARANTENA (come un vero download dal browser) ====="
+          xattr -rw com.apple.quarantine "0081;00000000;Chrome;FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF" "$APP"
+          echo "--- attributi presenti sull'app ---"; xattr -lr "$APP" | head -3
+          echo "===== Architettura (atteso: arm64) ====="; file "$BIN"; lipo -archs "$BIN"
+          echo "===== codesign: verifica profonda ====="; codesign --verify --deep --strict --verbose=4 "$APP"
+          echo "===== Gatekeeper: stato del sistema ====="; spctl --status
+          echo "===== Gatekeeper: giudizio sull'app in quarantena (spctl assess) ====="; spctl -a -t exec -vvv "$APP"
+          echo "===== Apertura come un doppio click (open) ====="; open "$APP"; echo "open exit=$?"
+          sleep 10
+          echo "===== L'app risulta in esecuzione dopo l'apertura? ====="; pgrep -fl "Trascrivi Lezioni" || echo "nessun processo trovato (non e' partita)"
+          pkill -f "Trascrivi Lezioni" 2>/dev/null
+          echo "(step diagnostico: non fa fallire il workflow)"; exit 0
