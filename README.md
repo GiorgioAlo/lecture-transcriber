@@ -20,12 +20,22 @@ On that page scroll down to **“Assets”** and download the file for your comp
    because the app isn't signed (it's a free hobby app, not a security problem). Click
    **More info → Run anyway**.
 
-### 🍎 Mac (Apple Silicon — M1/M2/M3…)
+### 🍎 Mac (Apple Silicon — M1/M2/M3/M4…)
 1. Download **`Trascrivi-Lezioni-macOS.dmg`** from the Assets list.
-2. Open it and **drag the app into the Applications folder**.
-3. Open it from Applications. If macOS says it's from an *unidentified developer*, go to
-   **System Settings → Privacy & Security**, scroll down and click **Open Anyway**, then
-   reopen the app. (Same reason as Windows: the app isn't signed.)
+2. Open the `.dmg` and **drag the app into the Applications folder** (don't run it straight
+   from the mounted disk image).
+3. The first time, macOS blocks it because the app isn't signed with a paid Apple account
+   (it's a free hobby app, not a security problem). To allow it:
+   - Double-click the app once. A warning appears — **or the icon just bounces in the Dock
+     and nothing opens**. This is expected, it's the security block (not a crash).
+   - Open **System Settings → Privacy & Security** and scroll down to the **Security**
+     section: you'll see a line like *“‘Trascrivi Lezioni’ was blocked…”* with an
+     **Open Anyway** button. Click it and confirm with your password / Touch ID.
+   - A final dialog appears → click **Open**. From now on it opens with a normal double-click.
+
+   > On recent macOS (Sequoia / Tahoe) this **System Settings → Privacy & Security →
+   > Open Anyway** path is the *only* way: the old “right-click → Open” trick no longer works,
+   > and if you only keep double-clicking, the icon may bounce in the Dock forever.
 
 > After opening it the first time, paste your free Google Gemini key (see **First run** below)
 > and you're ready.
