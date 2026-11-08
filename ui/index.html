@@ -300,6 +300,9 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
 .langtoggle button{border:0;background:transparent;color:var(--muted);font:600 12.5px/1 inherit;padding:7px 11px;cursor:pointer;letter-spacing:.3px}
 .langtoggle button+button{border-left:1px solid var(--border)}
 .langtoggle button.on{background:var(--accent);color:var(--accent-ink)}
+/* copia del selettore dentro il box di benvenuto: l'overlay copre la topbar, cosi' chi non parla italiano puo' cambiare lingua */
+.modal .ob-lang{position:absolute;top:16px;right:16px;margin:0}
+.modal .ob-lang button{padding:6px 9px;font-size:12px}
 @media (max-width:760px){ .cols{grid-template-columns:1fr} }
 @media (max-width:560px){ .body{padding:18px} .langs{grid-template-columns:1fr} .tabs button span{display:none} .quota{display:none} }
 </style>
@@ -455,6 +458,10 @@ try{var _th=localStorage.getItem('ui_theme');if(_th==='dark')document.documentEl
 
 <div class="overlay" id="onboarding" hidden>
   <div class="modal" role="dialog" aria-modal="true" style="max-width:500px">
+    <div class="langtoggle ob-lang" title="Lingua / Language">
+      <button type="button" data-lang="it" onclick="setLang('it')">IT</button>
+      <button type="button" data-lang="en" onclick="setLang('en')">EN</button>
+    </div>
     <h3 data-i18n="ob.welcome">Benvenuto 👋</h3>
     <p data-i18n="ob.body">Per trascrivere le lezioni serve una chiave API di Google Gemini (gratuita). La incolli una volta sola: resta salvata in modo sicuro sul tuo computer (Gestore Credenziali di Windows), mai in un file.</p>
     <div class="field">
@@ -714,8 +721,15 @@ var I18N = {
     'quota.zero':'0 min (come back tomorrow)'
   }
 };
-var LANG = 'it';
+var LANG = null;
 try { var _sl = localStorage.getItem('ui_lang'); if(_sl === 'it' || _sl === 'en') LANG = _sl; } catch(e){}
+/* mai scelta a mano: si segue la lingua del sistema (italiano -> IT, qualsiasi altra -> EN).
+   Non la salviamo: diventa "ricordata" solo quando l'utente clicca IT|EN. */
+if(!LANG){
+  var _nl = '';
+  try { _nl = String((navigator.languages && navigator.languages[0]) || navigator.language || '').toLowerCase(); } catch(e){}
+  LANG = (!_nl || _nl.indexOf('it') === 0) ? 'it' : 'en';
+}
 function t(key, vars){
   var s = (I18N[LANG] && I18N[LANG][key] != null) ? I18N[LANG][key] : (I18N.it[key] != null ? I18N.it[key] : key);
   if(vars){ for(var k in vars){ s = s.replace(new RegExp('\\{'+k+'\\}','g'), vars[k]); } }
@@ -727,8 +741,8 @@ function applyI18n(){
   Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-html]'), function(el){ el.innerHTML = t(el.getAttribute('data-i18n-html')); });
   Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-ph]'), function(el){ el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph'))); });
   Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-title]'), function(el){ el.setAttribute('title', t(el.getAttribute('data-i18n-title'))); });
-  var tg = document.getElementById('lang-toggle');
-  if(tg) Array.prototype.forEach.call(tg.querySelectorAll('button'), function(b){ b.classList.toggle('on', b.getAttribute('data-lang') === LANG); });
+  /* tutti i selettori IT|EN (topbar + box di benvenuto) restano allineati */
+  Array.prototype.forEach.call(document.querySelectorAll('.langtoggle button[data-lang]'), function(b){ b.classList.toggle('on', b.getAttribute('data-lang') === LANG); });
   var tb = document.getElementById('theme-btn');
   if(tb) tb.title = (document.documentElement.getAttribute('data-theme') === 'dark') ? t('theme.light') : t('theme.dark');
 }
