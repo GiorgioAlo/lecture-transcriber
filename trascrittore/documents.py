@@ -15,9 +15,11 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Pt
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.shared import Pt, RGBColor
 
-from . import util
+from . import config, util
 
 TIMESTAMP_RE = re.compile(r"\[(\d{2}:\d{2}:\d{2})\]")
 ALLCAPS_RE = re.compile(r"^[A-ZÀ-Ü0-9\s\-–—:]{3,}$")
@@ -136,12 +138,49 @@ def _reflow(righe: list[str]) -> list[str]:
     return paras
 
 
-# --- Lettura del testo in blocchi (comune a tutti i formati) --------------
-def _blocchi(testo: str) -> list[tuple[str, str]]:
-    """Divide il testo finale in blocchi ("titolo" | "punto" | "para", testo).
+# --- Note sulle parti non riuscite ----------------------------------------
+# Nel testo (e in cache) le note restano in italiano: `MARCATORE_ERRORE` serve a
+# riconoscere una lezione incompleta. Nel DOCUMENTO le riscriviamo nella sua
+# lingua: italiano per i documenti italiani, inglese per tutti gli altri.
+_TESTI_NOTA = {
+    "pulizia": {"it": "⚠️ NOTA: questa parte non è stata ripulita (Gemini era occupato). "
+                      "Qui sotto c'è la trascrizione grezza, non corretta.",
+                "en": "⚠️ NOTE: this part was not cleaned up (Gemini was busy). "
+                      "Below is the raw, uncorrected transcription."},
+    "traduzione": {"it": "⚠️ NOTA: questa parte non è stata tradotta (Gemini era occupato).",
+                   "en": "⚠️ NOTE: this part was not translated (Gemini was busy)."},
+    "fine": {"it": "⚠️ Fine della parte non ripulita.",
+             "en": "⚠️ End of the part that was not cleaned up."},
+}
 
-    La prosa viene accumulata e passata al reflow; un titolo o un elenco puntato
-    interrompe il flusso (viene emesso cosi com'e'), poi la prosa riprende."""
+
+def _e_nota(riga: str) -> bool:
+    """Una riga-nota inizia con "[⚠" (anche se Gemini l'ha tradotta)."""
+    return riga.startswith("[⚠")
+
+
+def _nota(riga: str, lingua: str | None) -> tuple[str, str]:
+    """("nota" | "fine", testo da mostrare) per una riga-nota del testo."""
+    if riga.startswith(config.MARCATORE_FINE):
+        tipo = "fine"
+    elif "non è stata ripulita" in riga:
+        tipo = "pulizia"
+    elif "non è stata tradotta" in riga:
+        tipo = "traduzione"
+    else:   # nota sconosciuta (es. tradotta da Gemini): la mostriamo com'e'
+        return "nota", riga.strip().lstrip("[").rstrip("]").strip()
+    lg = "it" if (lingua or "it").lower().startswith("it") else "en"
+    return ("fine" if tipo == "fine" else "nota"), _TESTI_NOTA[tipo][lg]
+
+
+# --- Lettura del testo in blocchi (comune a tutti i formati) --------------
+def _blocchi(testo: str, lingua: str | None = None) -> list[tuple[str, str]]:
+    """Divide il testo finale in blocchi ("titolo" | "punto" | "para" | "nota" |
+    "fine", testo).
+
+    La prosa viene accumulata e passata al reflow; un titolo, un elenco puntato
+    o una nota interrompe il flusso (viene emesso a parte), poi la prosa riprende.
+    Le note non finiscono MAI dentro un paragrafo (prima si perdevano nel testo)."""
     testo = (testo or "").replace("\r\n", "\n").replace("\r", "\n").strip()
     blocchi: list[tuple[str, str]] = []
     prosa: list[str] = []
@@ -154,7 +193,10 @@ def _blocchi(testo: str) -> list[tuple[str, str]]:
         s = riga.strip()
         if not s:
             continue
-        if _sembra_titolo(s):
+        if _e_nota(s):
+            _svuota_prosa()
+            blocchi.append(_nota(s, lingua))
+        elif _sembra_titolo(s):
             _svuota_prosa()
             blocchi.append(("titolo", s.rstrip(":")))
         elif s.startswith(("• ", "- ", "* ")):
@@ -176,12 +218,45 @@ def _e_domanda(frase: str) -> bool:
 
 
 # --- Word (.docx) ----------------------------------------------------------
-def genera_docx(testo: str, path: Path, titolo: str, note: str) -> Path:
+def _aggiungi_nota(doc, testo, fine=False):
+    """La nota come riquadro: sfondo ambra chiaro + bordo spesso a sinistra.
+    `fine` = la chiusura della parte grezza, piu' discreta (piccola, corsivo)."""
+    para = doc.add_paragraph()
+    pPr = para._p.get_or_add_pPr()
+    # Word e' rigido sull'ORDINE degli elementi di pPr: pBdr e shd vanno aggiunti
+    # PRIMA di spaziature/rientri (che python-docx poi inserisce al posto giusto).
+    bordi = OxmlElement("w:pBdr")
+    sx = OxmlElement("w:left")
+    for k, v in (("w:val", "single"), ("w:sz", "12" if fine else "24"),
+                 ("w:space", "8"), ("w:color", "E69500")):
+        sx.set(qn(k), v)
+    bordi.append(sx)
+    pPr.append(bordi)
+    sfondo = OxmlElement("w:shd")
+    for k, v in (("w:val", "clear"), ("w:color", "auto"), ("w:fill", "FFF4E0")):
+        sfondo.set(qn(k), v)
+    pPr.append(sfondo)
+    fmt = para.paragraph_format
+    fmt.left_indent = Pt(6)
+    fmt.space_before = Pt(10)
+    fmt.space_after = Pt(10)
+    run = para.add_run(testo)
+    run.font.color.rgb = RGBColor(0x8A, 0x4B, 0x00)
+    if fine:
+        run.italic = True
+        run.font.size = Pt(9.5)
+    else:
+        run.bold = True
+
+
+def genera_docx(testo: str, path: Path, titolo: str, note: str, lingua: str | None = None) -> Path:
     """Scrive il documento Word e ritorna il percorso creato."""
     doc = Document()
     _aggiungi_copertina(doc, titolo, _sottotitolo(), note)
-    for tipo, contenuto in _blocchi(testo):
-        if tipo == "titolo":
+    for tipo, contenuto in _blocchi(testo, lingua):
+        if tipo in ("nota", "fine"):
+            _aggiungi_nota(doc, contenuto, fine=(tipo == "fine"))
+        elif tipo == "titolo":
             doc.add_paragraph(contenuto, style="Heading 2")
         elif tipo == "punto":
             doc.add_paragraph(contenuto, style="List Bullet")
@@ -209,14 +284,15 @@ def _unisci(pezzi: list[tuple[str, str]]) -> str:
 
 
 # --- Testo semplice (.txt) -------------------------------------------------
-def genera_txt(testo: str, path: Path, titolo: str, note: str) -> Path:
+def genera_txt(testo: str, path: Path, titolo: str, note: str, lingua: str | None = None) -> Path:
     """Scrive il documento come testo semplice (UTF-8). Stessi paragrafi del
     Word, ma senza formattazione: i titoli stanno su una riga da soli e gli
     elenchi iniziano con "•"."""
     testa = [titolo, _sottotitolo()] + ([note] if note else [])
     sep = "=" * min(70, max(len(r) for r in testa))
     pezzi: list[tuple[str, str]] = [("testa", "\n".join(testa + [sep]))]
-    for tipo, contenuto in _blocchi(testo):
+    for tipo, contenuto in _blocchi(testo, lingua):
+        # le note sono gia' un paragrafo a se' (riga vuota prima e dopo, da _unisci)
         pezzi.append((tipo, "• " + contenuto if tipo == "punto" else contenuto))
     util.scrivi_testo(path, _unisci(pezzi))
     return path
@@ -272,7 +348,7 @@ def _md_paragrafo(testo: str) -> str:
     return " ".join(frasi_md)
 
 
-def genera_md(testo: str, path: Path, titolo: str, note: str) -> Path:
+def genera_md(testo: str, path: Path, titolo: str, note: str, lingua: str | None = None) -> Path:
     """Scrive il documento in Markdown (UTF-8): # titolo, ## titoli interni,
     - elenchi, timestamp in grassetto e domande in corsivo. Aperto in Obsidian,
     Notion, VS Code, GitHub... appare impaginato quasi come il Word."""
@@ -282,8 +358,12 @@ def genera_md(testo: str, path: Path, titolo: str, note: str) -> Path:
         testa.append(f"*{_md_testo(note)}*")
     testa += ["", "---"]
     pezzi: list[tuple[str, str]] = [("testa", "\n".join(testa))]
-    for tipo, contenuto in _blocchi(testo):
-        if tipo == "titolo":
+    for tipo, contenuto in _blocchi(testo, lingua):
+        if tipo == "nota":          # citazione = riquadro nelle app Markdown
+            pezzi.append((tipo, "> **" + _md_testo(contenuto) + "**"))
+        elif tipo == "fine":
+            pezzi.append((tipo, "> *" + _md_testo(contenuto) + "*"))
+        elif tipo == "titolo":
             pezzi.append((tipo, "## " + _md_testo(contenuto)))
         elif tipo == "punto":
             pezzi.append((tipo, "- " + _md_testo(contenuto)))
@@ -320,8 +400,10 @@ def percorso_documento(base: Path, formato: str) -> Path:
     return base.parent / f"{base.name}.{formato}"
 
 
-def genera(testo: str, base: Path, titolo: str, note: str, formati) -> list[Path]:
+def genera(testo: str, base: Path, titolo: str, note: str, formati,
+           lingua: str | None = None) -> list[Path]:
     """Scrive un documento per ogni formato scelto. `base` = percorso SENZA
-    estensione (es. .../Lezione_IT). Ritorna i percorsi creati, in ordine."""
-    return [GENERATORI[f](testo, percorso_documento(base, f), titolo, note)
+    estensione (es. .../Lezione_IT). `lingua` = codice della lingua del documento
+    (decide la lingua delle note). Ritorna i percorsi creati, in ordine."""
+    return [GENERATORI[f](testo, percorso_documento(base, f), titolo, note, lingua)
             for f in normalizza_formati(formati)]

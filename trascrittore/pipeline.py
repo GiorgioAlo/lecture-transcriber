@@ -243,7 +243,7 @@ def fase_testo(job: Job, client, reporter: Reporter, work_dir: Path, raw: str, r
             vecchio = documents.percorso_documento(base, f)
             if f not in formati and vecchio.exists():
                 vecchio.unlink(missing_ok=True)
-        for path in documents.genera(testi.get(lang, ""), base, titolo, nota, formati):
+        for path in documents.genera(testi.get(lang, ""), base, titolo, nota, formati, lang):
             reporter.log(f"💾 {path.name}")
             documenti.append(path)
         reporter.avanzamento(_pct(4, (k + 1) / max(1, len(job.lingue_output))))

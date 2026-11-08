@@ -253,7 +253,8 @@ def _elabora_blocco(client, indice, totale, blocco, sorgente, destinazione, cors
         if grezzo_su_errore:
             nota = (f"\n{config.MARCATORE_ERRORE}: questa parte non è stata ripulita "
                     "(Gemini era occupato); qui sotto c'è la trascrizione grezza, non corretta.]\n")
-            return indice, nota + (blocco or "").strip() + "\n", True
+            fine = f"\n{config.MARCATORE_FINE}: fine della parte non ripulita.]\n"
+            return indice, nota + (blocco or "").strip() + "\n" + fine, True
         nota = f"\n{config.MARCATORE_ERRORE}: questa parte non è stata tradotta (Gemini era occupato).]\n"
         return indice, nota, True
 

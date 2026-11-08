@@ -175,6 +175,10 @@ PREFETCH_LEZIONI = 2
 # marcatore mettiamo comunque la trascrizione GREZZA del blocco (vedi textproc), quindi il
 # contenuto c'e', manca solo la correzione. Cambiata da "ERRORE CRITICO" il 2026-10-16.
 MARCATORE_ERRORE = "[⚠️ NOTA"
+# Chiude la parte grezza dopo una nota di pulizia, cosi nel documento si vede dove
+# finisce il testo non corretto. NON serve a riconoscere i risultati incompleti
+# (per quello basta MARCATORE_ERRORE, che c'e' sempre all'inizio della parte).
+MARCATORE_FINE = "[⚠️ FINE"
 
 # --- Le 5 fasi mostrate dalla barra di avanzamento ------------------------
 # L'ordine e il testo DEVONO combaciare con la UI (ui/index.html) e con

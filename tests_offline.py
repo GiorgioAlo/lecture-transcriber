@@ -130,6 +130,40 @@ check("md: asterischi/trattini bassi del testo neutralizzati", "\\*asterischi\\*
 check("md: '#' a inizio paragrafo NON diventa un titolo", "\n\\# non un titolo" in md)
 check("md: '2024.' a inizio paragrafo NON diventa un elenco", documents._md_riga("2024. Anno") == "2024\\. Anno")
 
+print("\n#  note sulle parti non riuscite (riquadro a parte, lingua del documento)")
+testo_n = ("Prima frase della lezione. Seconda frase.\n"
+           f"{config.MARCATORE_ERRORE}: questa parte non è stata ripulita (Gemini era occupato); "
+           "qui sotto c'è la trascrizione grezza, non corretta.]\n"
+           "testo grezzo senza punteggiatura\n"
+           f"{config.MARCATORE_FINE}: fine della parte non ripulita.]\n"
+           "Il testo pulito riprende qui.\n"
+           f"{config.MARCATORE_ERRORE}: questa parte non è stata tradotta (Gemini era occupato).]\n"
+           "[⚠️ NOTE: this part was translated by Gemini]\n")
+bl = documents._blocchi(testo_n, "it")
+check("note: blocchi separati, mai dentro un paragrafo",
+      [t for t, _ in bl] == ["para", "nota", "para", "fine", "para", "nota", "nota"]
+      and not any("⚠" in c for t, c in bl if t == "para"))
+check("note: in italiano per un documento italiano", bl[1][1].startswith("⚠️ NOTA: questa parte non è stata ripulita"))
+check("note: in inglese per le altre lingue",
+      documents._blocchi(testo_n, "de")[1][1].startswith("⚠️ NOTE: this part was not cleaned up")
+      and documents._blocchi(testo_n, "en")[3][1] == "⚠️ End of the part that was not cleaned up.")
+check("note: una nota sconosciuta resta com'e' (senza parentesi quadre)",
+      bl[-1][1] == "⚠️ NOTE: this part was translated by Gemini")
+creati_n = documents.genera(testo_n, tmp / "Note_EN", "Lezione — Note", "nota", ["docx", "txt", "md"], "en")
+check("note: docx creato", creati_n[0].exists() and creati_n[0].stat().st_size > 0)
+from docx import Document as _Doc
+_pars = [p for p in _Doc(str(creati_n[0])).paragraphs if "⚠" in p.text]
+check("note docx: riquadro (sfondo + bordo) e grassetto",
+      len(_pars) == 4 and all(p._p.pPr.find(qn_shd) is not None for p in _pars for qn_shd in [
+          "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}shd"])
+      and _pars[0].runs[0].bold and _pars[1].runs[0].italic)
+md_n = creati_n[2].read_text(encoding="utf-8")
+check("note md: citazione in grassetto / corsivo",
+      "\n> **⚠️ NOTE: this part was not cleaned up" in md_n and "\n> *⚠️ End of the part" in md_n)
+txt_n = creati_n[1].read_text(encoding="utf-8")
+check("note txt: paragrafo a se' con righe vuote attorno",
+      "\n\n⚠️ NOTE: this part was not cleaned up (Gemini was busy). Below is the raw, uncorrected transcription.\n\n" in txt_n)
+
 print("\n#6 download _scaricati_completi (esclude i parziali)")
 dtmp = Path(tempfile.mkdtemp())
 (dtmp / "scaricato.webm.part").write_text("parziale")
@@ -300,6 +334,8 @@ _out, _err = textproc.pulisci(_CliFail(), _raw_in, "it", "", _RepTx())
 check("pulizia fallita: conta il blocco fallito", _err >= 1)
 check("pulizia fallita: il testo GREZZO finisce nel risultato", "Prima frase grezza del blocco di prova" in _out)
 check("pulizia fallita: c'e' la nota/marcatore", config.MARCATORE_ERRORE in _out)
+check("pulizia fallita: la parte grezza e' chiusa DOPO il testo grezzo",
+      _out.index("Prima frase grezza del blocco di prova") < _out.index(config.MARCATORE_FINE))
 _out2, _err2 = textproc.traduci(_CliFail(), _raw_in, "it", "en", "", _RepTx())
 check("traduzione fallita: conta il blocco", _err2 >= 1)
 check("traduzione fallita: nota presente", config.MARCATORE_ERRORE in _out2)
