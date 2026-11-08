@@ -628,7 +628,7 @@ var I18N = {
     't.download':'Scarica','t.later':'Più tardi',
     't.incompleteTitle':'Completata, alcune parti non ripulite','t.incompleteDesc':'Alcune parti non è stato possibile ripulirle (Gemini era occupato): nel documento trovi la trascrizione grezza, segnalata con ⚠️. Premi «Riprova» più tardi per ripulirle.',
     'parts.some':'alcune parti non ripulite','parts.n':'{n} parti non ripulite',
-    'saved.in':'✓ salvato in {c}','saved.cardN':'{n} documenti salvati','saved.card1':'documento salvato','saved.cardIn':' in {c}',
+    'saved.cardN':'{n} documenti salvati','saved.card1':'documento salvato','saved.cardIn':' in {c}',
     'quota.zero':'0 min (torna domani)'
   },
   en: {
@@ -717,7 +717,7 @@ var I18N = {
     't.download':'Download','t.later':'Later',
     't.incompleteTitle':'Completed, some parts not cleaned up','t.incompleteDesc':'Some parts couldn\'t be cleaned up (Gemini was busy): in the document you\'ll find the raw transcript, marked with ⚠️. Press «Retry» later to clean them up.',
     'parts.some':'some parts not cleaned up','parts.n':'{n} parts not cleaned up',
-    'saved.in':'✓ saved in {c}','saved.cardN':'{n} documents saved','saved.card1':'document saved','saved.cardIn':' in {c}',
+    'saved.cardN':'{n} documents saved','saved.card1':'document saved','saved.cardIn':' in {c}',
     'quota.zero':'0 min (come back tomorrow)'
   }
 };
@@ -753,6 +753,7 @@ function setLang(l){
   applyI18n();
   _renderChips(); if(!document.getElementById('menu').hidden) _renderMenu();
   if(_lastQuota) appQuota(_lastQuota);
+  riscriviStatiFatte();
 }
 /* etichetta "N documento/i" dipendente dalla lingua (plurale IT vs EN) */
 function docLabel(n){ return LANG === 'it' ? (n + ' document' + (n===1?'o':'i')) : (n + ' document' + (n===1?'':'s')); }
@@ -1063,12 +1064,13 @@ function addDoneCard(info){
   var li = costruisciCard(info.nome, info.sub || '', 'file', info.path); li.dataset.state='done';
   if(info.src) li.dataset.src = info.src;   // path sorgente originale: evita doppioni se la ri-aggiungi
   li.querySelector('.qicon').innerHTML = SVG_OK;
+  li.dataset.ndoc = info.documenti || 0;
+  li.dataset.lingue = info.lingue || '';
   if(info.cartella){
     li.dataset.cartella = info.cartella;
-    li.querySelector('.qdone').textContent = t('saved.in', {c: info.cartella});
-  } else {
-    li.querySelector('.qdone').textContent = '✓ ' + docLabel(info.documenti) + ' (' + info.lingue + ')';
+    li.dataset.salvati = info.documenti || 1;   // stessa frase di subito dopo il salvataggio
   }
+  scriviStatoFatta(li);
   var done = document.getElementById('queue-done');
   done.insertBefore(li, done.firstChild);
   aggiornaSezioni();
@@ -1292,19 +1294,22 @@ function appLezioneFatta(path, info){
   var li = cardByPath(path); if(!li) return;
   _stopCreep(li);
   li.dataset.state = 'done';
-  var base = '✓ ' + docLabel(info.documenti) + ' (' + info.lingue + ')';
+  li.dataset.ndoc = info.documenti || 0;
+  li.dataset.lingue = info.lingue || '';
+  delete li.dataset.salvati;          // (es. «Riprova» su una lezione gia' salvata)
   // Lezione completata ma con parti NON elaborate (Gemini ha rifiutato/fallito alcuni
-  // blocchi dopo i tentativi): avviso l'utente. Nel Word, al posto di ogni blocco, c'e'
-  // gia' un marcatore visibile "[⚠️ ERRORE CRITICO: ...]".
+  // blocchi dopo i tentativi): avviso l'utente. Nel documento ogni parte mancante e'
+  // segnalata da un riquadro "⚠️ NOTA".
   if(info.completo === false){
-    var n = info.blocchi_falliti || 0;
+    li.dataset.incompleta = '1';
+    li.dataset.falliti = info.blocchi_falliti || 0;
     li.querySelector('.qicon').innerHTML = SVG_WARN;
-    li.querySelector('.qdone').textContent = base + ' — ' + (n ? t('parts.n',{n:n}) : t('parts.some'));
     toast('warn', t('t.incompleteTitle'), t('t.incompleteDesc'));
   } else {
+    delete li.dataset.incompleta; delete li.dataset.falliti;
     li.querySelector('.qicon').innerHTML = SVG_OK;
-    li.querySelector('.qdone').textContent = base;
   }
+  scriviStatoFatta(li);
   var done = document.getElementById('queue-done');   // passa in CIMA a 'Completate'
   done.insertBefore(li, done.firstChild);
   aggiornaSezioni();
@@ -1357,12 +1362,35 @@ function appAnnullato(key){
   aggiornaSezioni();
   toast('warn',t('t.canceledTitle'),t('t.canceledDesc'));
 }
+/* Scritta sotto una lezione completata. La scheda ricorda COSA dire (dataset:
+   ndoc, lingue, incompleta/falliti, salvati/cartella); la frase si compone qui,
+   cosi' setLang() la puo' riscrivere nella nuova lingua. */
+function scriviStatoFatta(li){
+  var d = li.dataset, s;
+  if(d.salvati){
+    var n = +d.salvati || 1;
+    s = '✓ ' + (n > 1 ? t('saved.cardN',{n:n}) : t('saved.card1')) + (d.cartella ? t('saved.cardIn',{c:d.cartella}) : '');
+  } else {
+    s = '✓ ' + docLabel(+d.ndoc || 0) + ' (' + (d.lingue || '') + ')';
+    if(d.incompleta){
+      var f = +d.falliti || 0;
+      s += ' — ' + (f ? t('parts.n',{n:f}) : t('parts.some'));
+    }
+  }
+  li.querySelector('.qdone').textContent = s;
+}
+function riscriviStatiFatte(){
+  Array.prototype.forEach.call(document.querySelectorAll('.qitem[data-state="done"]'), function(li){
+    if(li.dataset.ndoc !== undefined) scriviStatoFatta(li);
+  });
+}
 function appLavoroFinito(){ document.getElementById('go').disabled = false; aggiornaBtnAnnullaTutto(); }
 function appGiaInCorso(){ document.getElementById('go').disabled = true; toast('warn',t('t.busyTitle'),t('t.busyDesc')); }
 function appSalvato(path, info){
   var li = cardByPath(path); if(!li) return;
   li.dataset.cartella = info.cartella || '';
-  li.querySelector('.qdone').textContent = '✓ ' + (info.n>1 ? t('saved.cardN',{n:info.n}) : t('saved.card1')) + (info.cartella ? t('saved.cardIn',{c:info.cartella}) : '');
+  li.dataset.salvati = info.n || 1;
+  scriviStatoFatta(li);
   toast('ok',t('t.savedOkTitle'), info.n>1 ? t('t.savedNDesc',{n:info.n}) : t('t.savedOneDesc'));
 }
 
