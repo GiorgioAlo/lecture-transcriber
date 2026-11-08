@@ -12,6 +12,7 @@ Examples:
     transcribe "https://www.youtube.com/watch?v=XXXX" --out ./transcriptions
     transcribe lec1.mp4 "https://youtu.be/XXXX" lec2.mp4 --out ./transcriptions
     transcribe "https://org.webex.com/..." --cookies cookies.txt --out ./transcriptions
+    transcribe lecture.mp4 --formats docx txt md           # Word + plain text + Markdown
     transcribe lecture.mp4 --start 10 --minutes 5          # quick test on a clip
     transcribe --text transcript.txt --name Zanero --languages it
 """
@@ -25,7 +26,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import config, languages, percorsi
+from . import config, documents, languages, percorsi
 from .errors import ErrorePipeline
 from .pipeline import Job, esegui
 from .progress import ReporterConsole
@@ -62,7 +63,8 @@ def main(argv: list[str] | None = None) -> int:
 
     ap = argparse.ArgumentParser(
         prog="transcribe",
-        description="Turn one or more lectures (files or links) into cleaned, translated Word documents.",
+        description="Turn one or more lectures (files or links) into cleaned, translated documents "
+                    "(Word, plain text and/or Markdown).",
     )
     ap.add_argument("sources", nargs="*", metavar="SOURCE",
                     help="one or more lectures; each is a FILE PATH (mp4, m4a, ...) OR a LINK (YouTube/Webex)")
@@ -71,10 +73,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--languages", nargs="+", default=["it", "en"],
                     choices=list(languages.LINGUE.keys()), metavar="LANG",
                     help="output document languages (default: it en)")
+    ap.add_argument("--formats", nargs="+", default=list(documents.FORMATI_DEFAULT),
+                    choices=list(documents.FORMATI), metavar="FMT",
+                    help="output document formats: docx txt md (default: docx)")
     ap.add_argument("--course", default="", help='course name, e.g. "Computer Security"')
     ap.add_argument("--cookies", help="cookies.txt file (needed for Webex links); applies to all links")
     ap.add_argument("--password", help="video password (some Webex recordings); applies to all links")
-    ap.add_argument("--out", help="folder where the Word documents are saved (created if missing)")
+    ap.add_argument("--out", help="folder where the documents are saved (created if missing)")
     ap.add_argument("--start", type=float, default=0, metavar="MIN", help="start minute (applies to all)")
     ap.add_argument("--minutes", type=float, default=None, metavar="MIN", help="how many minutes to use (applies to all)")
     ap.add_argument("--redo", action="store_true", help="redo all phases even if already cached")
@@ -102,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = Path(args.out) if args.out else None
     shared = dict(
         lingue_output=args.languages,
+        formati=documents.normalizza_formati(args.formats),
         corso=args.course,
         cookies=args.cookies,
         password=args.password,

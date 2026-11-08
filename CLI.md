@@ -3,7 +3,7 @@
 A no-GUI version of the lecture transcriber, for people comfortable with a
 terminal (and the natural way to run it on Linux/servers). Same engine as the
 desktop app: audio/video files or links (YouTube/Webex) → cleaned, translated
-Word documents, via Google Gemini.
+documents (Word, plain text and/or Markdown), via Google Gemini.
 
 ## Requirements
 
@@ -40,7 +40,7 @@ You give `transcribe` **one or more lectures**. Each lecture is either:
 - a **link** to download (YouTube / Webex).
 
 You can mix files and links freely; they are processed one after another and all
-the Word documents go into the same `--out` folder. Put each path/link in
+the documents go into the same `--out` folder. Put each path/link in
 **double quotes** if it contains spaces.
 
 ```bash
@@ -55,6 +55,9 @@ transcribe "https://polimi.webex.com/..." "C:\Lectures\Zanero 1.mp4" "C:\Lecture
 
 # choose output languages (default is Italian + English)
 transcribe lecture.mp4 --languages it en fr --out ./transcriptions
+
+# choose output formats (default is Word only)
+transcribe lecture.mp4 --formats docx txt md --out ./transcriptions
 
 # quick test: only 5 minutes starting at minute 10
 transcribe lecture.mp4 --start 10 --minutes 5
@@ -75,10 +78,11 @@ The output folder is **created automatically** if it doesn't exist.
 | `--text FILE` | use an existing `.txt` transcript (skip transcription; one lecture only) |
 | `--name NAME` | lecture name (single lecture only; default: file name) |
 | `--languages L …` | output languages, e.g. `it en` (default: `it en`) |
+| `--formats F …` | output formats: `docx` (Word), `txt` (plain text), `md` (Markdown) (default: `docx`) |
 | `--course "…"` | course name (helps cleanup/translation) |
 | `--cookies FILE` | `cookies.txt` for authenticated links (Webex); applies to all links |
 | `--password PW` | video password (some Webex recordings); applies to all links |
-| `--out DIR` | folder where the Word files are saved (created if missing) |
+| `--out DIR` | folder where the documents are saved (created if missing) |
 | `--start MIN` / `--minutes MIN` | transcribe only a clip (applies to all) |
 | `--redo` | redo all phases even if already cached |
 

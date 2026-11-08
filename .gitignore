@@ -45,3 +45,6 @@ STATO.md
 scratchpad/
 .DS_Store
 Thumbs.db
+
+# --- Preferenze utente (formati dei documenti, ...) ---
+preferenze.json

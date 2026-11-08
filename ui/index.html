@@ -283,6 +283,17 @@ input[type="password"]::-ms-reveal,input[type="password"]::-ms-clear{display:non
 .set-line .set-lab{flex:1}
 .set-line .set-val{font-variant-numeric:tabular-nums;color:var(--fg);font-weight:600}
 .set-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+/* formati dei documenti: tre caselle-pillola */
+.set-fmt{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.set-fmt .set-h{font-size:13px;font-weight:700;color:var(--fg);margin:0 0 3px}
+.set-fmt .set-sub{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.fmts{display:flex;flex-wrap:wrap;gap:8px}
+.fmt{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-radius:var(--r-pill);
+  padding:7px 13px;font-size:13px;font-weight:600;color:var(--fg);cursor:pointer;user-select:none;transition:.16s}
+.fmt:hover{border-color:var(--accent)}
+.fmt input{accent-color:var(--accent);width:15px;height:15px;margin:0;cursor:pointer}
+.fmt small{color:var(--muted);font-weight:500;font-size:11.5px}
+.fmt:has(input:checked){border-color:var(--accent);background:var(--panel-2)}
 .set-tools .btn{font-size:12.5px}
 
 .langtoggle{display:inline-flex;border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-right:8px}
@@ -364,7 +375,7 @@ try{var _th=localStorage.getItem('ui_theme');if(_th==='dark')document.documentEl
       </div>
 
       <p class="step-label" style="margin-top:28px"><span class="n">2</span> <span data-i18n="s2">Lingue dei documenti</span></p>
-      <p class="substep" data-i18n-html="s2.sub">In uscita avrai <b>un documento Word per ogni lingua</b> qui sotto. La lingua parlata (italiano o inglese) la riconosco da sola.</p>
+      <p class="substep" data-i18n-html="s2.sub">In uscita avrai <b>un documento per ogni lingua</b> qui sotto (Word, o anche .txt/.md: scegli nelle Impostazioni ⚙). La lingua parlata (italiano o inglese) la riconosco da sola.</p>
       <div class="langpick">
         <div class="chips" id="chips"></div>
         <div class="srch">
@@ -415,7 +426,7 @@ try{var _th=localStorage.getItem('ui_theme');if(_th==='dark')document.documentEl
 <div class="overlay" id="ask-folder" hidden>
   <div class="modal" role="dialog" aria-modal="true">
     <h3 data-i18n="ask.title">Dove salvo i documenti?</h3>
-    <p data-i18n="ask.body">I file Word di tutte le lezioni di questa sessione finiranno in questa cartella.</p>
+    <p data-i18n="ask.body">I documenti di tutte le lezioni di questa sessione finiranno in questa cartella.</p>
     <div class="pick" id="pick-row">
       <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h4l2 3h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/></svg></span>
       <span class="pt"><div class="p1" id="pick-title">Nessuna cartella scelta</div><div class="p2" id="pick-path">Premi "Scegli cartella…"</div></span>
@@ -494,6 +505,15 @@ try{var _th=localStorage.getItem('ui_theme');if(_th==='dark')document.documentEl
         <button class="btn primary mini" id="set-save" onclick="salvaChiaveImpostazioni()" data-i18n="save">Salva</button>
       </div>
     </div>
+    <div class="set-fmt">
+      <p class="set-h" data-i18n="set.fmtTitle">Formato dei documenti</p>
+      <p class="set-sub" data-i18n="set.fmtSub">Per ogni lingua creo un file in ciascun formato spuntato. Vale per le prossime trascrizioni.</p>
+      <div class="fmts" id="set-fmts">
+        <label class="fmt"><input type="checkbox" value="docx" onchange="cambiaFormato(this)" checked> Word <small>.docx</small></label>
+        <label class="fmt"><input type="checkbox" value="txt" onchange="cambiaFormato(this)"> <span data-i18n="set.fmtTxt">Testo</span> <small>.txt</small></label>
+        <label class="fmt"><input type="checkbox" value="md" onchange="cambiaFormato(this)"> Markdown <small>.md</small></label>
+      </div>
+    </div>
     <div class="set-extra">
       <div class="set-line">
         <span class="set-lab" data-i18n="set.version">Versione app</span>
@@ -531,7 +551,7 @@ var I18N = {
     'webex.guideh':'Come scarico i cookie?','webex.guidetime':'(~1 minuto)',
     'webex.steps':'<li>Installa l\'estensione <a href="#" onclick="apriLink(\'https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc\');return false">Get cookies.txt LOCALLY</a> (Chrome o Edge).</li><li>Apri il <b>link della registrazione</b> Webex nel browser e <b>accedi</b> (aprila).</li><li>Clicca l\'<b>icona dell\'estensione</b> e premi <b>Export</b>.</li><li>Parte il download di un file (di solito chiamato come il sito, es. <i>politecnicomilano.webex.com_cookies.txt</i>).</li><li>Torna qui, premi <b>Carica cookies</b> e scegli quel file.</li>',
     's2':'Lingue dei documenti',
-    's2.sub':'In uscita avrai <b>un documento Word per ogni lingua</b> qui sotto. La lingua parlata (italiano o inglese) la riconosco da sola.',
+    's2.sub':'In uscita avrai <b>un documento per ogni lingua</b> qui sotto (Word, o anche .txt/.md: scegli nelle Impostazioni ⚙). La lingua parlata (italiano o inglese) la riconosco da sola.',
     'lang.addph':'Aggiungi una lingua…','go':'Avvia trascrizione',
     'quota.pre':'Oggi puoi ancora trascrivere',
     'quota.title':'{u} di {cap} richieste di trascrizione usate oggi · ~{m} min a richiesta',
@@ -541,7 +561,7 @@ var I18N = {
     'sec.done':'Completate','clear':'Svuota','clear.title':'Elimina tutte le completate e svuota la cache',
     'queue.empty':'Nessuna lezione. Aggiungila dal pannello a sinistra.',
     'ask.title':'Dove salvo i documenti?',
-    'ask.body':'I file Word di tutte le lezioni di questa sessione finiranno in questa cartella.',
+    'ask.body':'I documenti di tutte le lezioni di questa sessione finiranno in questa cartella.',
     'pick.none':'Nessuna cartella scelta','pick.nonesub':'Premi "Scegli cartella…"',
     'pick.choose':'Scegli cartella…','ask.manual':'Salvo a mano dopo',
     'cancel':'Annulla','start':'Avvia','confirm':'Conferma',
@@ -554,6 +574,9 @@ var I18N = {
     'set.body':'La tua chiave API di Google Gemini, salvata in modo sicuro sul PC.',
     'set.keysaved':'Chiave salvata','set.keyph':'Incolla la nuova chiave…',
     'set.version':'Versione app','set.report':'Segnala un problema','set.updates':'Cerca aggiornamenti',
+    'set.fmtTitle':'Formato dei documenti','set.fmtTxt':'Testo',
+    'set.fmtSub':'Per ogni lingua creo un file in ciascun formato spuntato. Vale per le prossime trascrizioni.',
+    't.fmtOneTitle':'Serve almeno un formato','t.fmtOneDesc':'Spunta prima un altro formato, poi puoi togliere questo.',
     'upd.checking':'Controllo…','t.upToDateTitle':'Sei aggiornato','t.upToDateDesc':'Hai già l\'ultima versione dell\'app.',
     't.updCheckFailTitle':'Controllo non riuscito','t.updCheckFailDesc':'Non riesco a controllare ora (connessione?). Riprova.',
     'set.delete':'Elimina chiave','close':'Chiudi','edit':'Modifica','save':'Salva',
@@ -587,16 +610,16 @@ var I18N = {
     't.canceledTitle':'Annullato','t.canceledDesc':'Il lavoro è stato interrotto. Le lezioni non finite sono tornate in coda (riprendono da dove erano).',
     't.busyTitle':'Un attimo','t.busyDesc':'Sto già trascrivendo: aspetta che finisca prima di avviare di nuovo.',
     't.savedOkTitle':'Salvato','t.savedOneDesc':'Documento salvato.','t.savedNDesc':'{n} documenti salvati nella cartella scelta.',
-    't.clearDoneTitle':'Svuotare le lezioni completate?','t.clearDoneBody':'Tolgo le lezioni completate da questa lista e cancello la cache interna dell\'app. I documenti Word che hai già salvato nelle tue cartelle NON vengono toccati.','t.clearDoneLabel':'Svuota',
+    't.clearDoneTitle':'Svuotare le lezioni completate?','t.clearDoneBody':'Tolgo le lezioni completate da questa lista e cancello la cache interna dell\'app. I documenti che hai già salvato nelle tue cartelle NON vengono toccati.','t.clearDoneLabel':'Svuota',
     't.doneTitle':'Fatto','t.doneDesc':'Lista completate svuotata. I tuoi file salvati sono al sicuro.',
-    't.removedTitle':'Eliminata','t.removedDesc':'Tolta dalla lista e dalla cache. Il Word che hai salvato resta dov\'è.',
+    't.removedTitle':'Eliminata','t.removedDesc':'Tolta dalla lista e dalla cache. I documenti che hai salvato restano dove sono.',
     't.notAvailTitle':'Non disponibile','t.cacheManageDesc':'Apri l\'app vera per gestire la cache.',
     't.reportNotAvail':'Apri l\'app vera per segnalare.',
     't.formNotAvailTitle':'Form non disponibile','t.formNotAvailDesc':'La segnalazione non è ancora configurata.',
     't.updNotAvail':'Apri l\'app vera per aggiornare.',
     't.updateTitle':'Aggiornamento disponibile','t.updateDesc':'È uscita la versione {ver}. Scaricala per avere correzioni e novità.',
     't.download':'Scarica','t.later':'Più tardi',
-    't.incompleteTitle':'Completata, alcune parti non ripulite','t.incompleteDesc':'Alcune parti non è stato possibile ripulirle (Gemini era occupato): nel Word trovi la trascrizione grezza, segnalata con ⚠️. Premi «Riprova» più tardi per ripulirle.',
+    't.incompleteTitle':'Completata, alcune parti non ripulite','t.incompleteDesc':'Alcune parti non è stato possibile ripulirle (Gemini era occupato): nel documento trovi la trascrizione grezza, segnalata con ⚠️. Premi «Riprova» più tardi per ripulirle.',
     'parts.some':'alcune parti non ripulite','parts.n':'{n} parti non ripulite',
     'saved.in':'✓ salvato in {c}','saved.cardN':'{n} documenti salvati','saved.card1':'documento salvato','saved.cardIn':' in {c}',
     'quota.zero':'0 min (torna domani)'
@@ -617,7 +640,7 @@ var I18N = {
     'webex.guideh':'How do I get the cookies?','webex.guidetime':'(~1 minute)',
     'webex.steps':'<li>Install the <a href="#" onclick="apriLink(\'https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc\');return false">Get cookies.txt LOCALLY</a> extension (Chrome or Edge).</li><li>Open the Webex <b>recording link</b> in the browser and <b>sign in</b> (open it).</li><li>Click the <b>extension icon</b> and press <b>Export</b>.</li><li>A file download starts (usually named after the site, e.g. <i>politecnicomilano.webex.com_cookies.txt</i>).</li><li>Come back here, press <b>Load cookies</b> and pick that file.</li>',
     's2':'Document languages',
-    's2.sub':'You will get <b>one Word document per language</b> below. I detect the spoken language (Italian or English) on my own.',
+    's2.sub':'You will get <b>one document per language</b> below (Word, or also .txt/.md: choose in Settings ⚙). I detect the spoken language (Italian or English) on my own.',
     'lang.addph':'Add a language…','go':'Start transcription',
     'quota.pre':'Today you can still transcribe',
     'quota.title':'{u} of {cap} transcription requests used today · ~{m} min per request',
@@ -627,7 +650,7 @@ var I18N = {
     'sec.done':'Completed','clear':'Clear','clear.title':'Remove all completed and clear the cache',
     'queue.empty':'No lectures yet. Add one from the panel on the left.',
     'ask.title':'Where do I save the documents?',
-    'ask.body':'The Word files of every lecture in this session will go in this folder.',
+    'ask.body':'The documents of every lecture in this session will go in this folder.',
     'pick.none':'No folder selected','pick.nonesub':'Press "Choose folder…"',
     'pick.choose':'Choose folder…','ask.manual':'I\'ll save manually later',
     'cancel':'Cancel','start':'Start','confirm':'Confirm',
@@ -640,6 +663,9 @@ var I18N = {
     'set.body':'Your Google Gemini API key, saved securely on your PC.',
     'set.keysaved':'Key saved','set.keyph':'Paste the new key…',
     'set.version':'App version','set.report':'Report a problem','set.updates':'Check for updates',
+    'set.fmtTitle':'Document format','set.fmtTxt':'Text',
+    'set.fmtSub':'For each language I create one file in every checked format. Applies to the next transcriptions.',
+    't.fmtOneTitle':'At least one format is needed','t.fmtOneDesc':'Check another format first, then you can untick this one.',
     'upd.checking':'Checking…','t.upToDateTitle':'You\'re up to date','t.upToDateDesc':'You already have the latest version of the app.',
     't.updCheckFailTitle':'Check failed','t.updCheckFailDesc':'Can\'t check right now (connection?). Try again.',
     'set.delete':'Delete key','close':'Close','edit':'Edit','save':'Save',
@@ -673,16 +699,16 @@ var I18N = {
     't.canceledTitle':'Canceled','t.canceledDesc':'The work was stopped. Unfinished lectures went back to the queue (they resume where they left off).',
     't.busyTitle':'One moment','t.busyDesc':'I\'m already transcribing: wait for it to finish before starting again.',
     't.savedOkTitle':'Saved','t.savedOneDesc':'Document saved.','t.savedNDesc':'{n} documents saved in the chosen folder.',
-    't.clearDoneTitle':'Clear the completed lectures?','t.clearDoneBody':'I remove the completed lectures from this list and clear the app\'s internal cache. The Word documents you already saved in your folders are NOT touched.','t.clearDoneLabel':'Clear',
+    't.clearDoneTitle':'Clear the completed lectures?','t.clearDoneBody':'I remove the completed lectures from this list and clear the app\'s internal cache. The documents you already saved in your folders are NOT touched.','t.clearDoneLabel':'Clear',
     't.doneTitle':'Done','t.doneDesc':'Completed list cleared. Your saved files are safe.',
-    't.removedTitle':'Removed','t.removedDesc':'Removed from the list and the cache. The Word you saved stays where it is.',
+    't.removedTitle':'Removed','t.removedDesc':'Removed from the list and the cache. The documents you saved stay where they are.',
     't.notAvailTitle':'Not available','t.cacheManageDesc':'Open the real app to manage the cache.',
     't.reportNotAvail':'Open the real app to report.',
     't.formNotAvailTitle':'Form not available','t.formNotAvailDesc':'Reporting is not configured yet.',
     't.updNotAvail':'Open the real app to update.',
     't.updateTitle':'Update available','t.updateDesc':'Version {ver} is out. Download it for fixes and new features.',
     't.download':'Download','t.later':'Later',
-    't.incompleteTitle':'Completed, some parts not cleaned up','t.incompleteDesc':'Some parts couldn\'t be cleaned up (Gemini was busy): in the Word you\'ll find the raw transcript, marked with ⚠️. Press «Retry» later to clean them up.',
+    't.incompleteTitle':'Completed, some parts not cleaned up','t.incompleteDesc':'Some parts couldn\'t be cleaned up (Gemini was busy): in the document you\'ll find the raw transcript, marked with ⚠️. Press «Retry» later to clean them up.',
     'parts.some':'some parts not cleaned up','parts.n':'{n} parts not cleaned up',
     'saved.in':'✓ saved in {c}','saved.cardN':'{n} documents saved','saved.card1':'document saved','saved.cardIn':' in {c}',
     'quota.zero':'0 min (come back tomorrow)'
@@ -818,6 +844,7 @@ function apriImpostazioni(){
   document.getElementById('set-key').value = '';
   mostraErr('set-err','set-err-t','');
   document.getElementById('settings').hidden = false;
+  caricaFormati();
   if(api() && api().info_app) Promise.resolve(api().info_app()).then(function(info){
     info = info || {};
     document.getElementById('set-version').textContent = info.versione || '—';
@@ -825,6 +852,24 @@ function apriImpostazioni(){
   });
 }
 function chiudiImpostazioni(){ document.getElementById('settings').hidden = true; }
+/* --- Impostazioni: formati dei documenti (salvati da Python in preferenze.json) --- */
+function _caselleFormato(){ return Array.prototype.slice.call(document.querySelectorAll('#set-fmts input')); }
+function mostraFormati(lista){
+  lista = lista || ['docx'];
+  _caselleFormato().forEach(function(c){ c.checked = lista.indexOf(c.value) !== -1; });
+}
+function caricaFormati(){
+  if(api() && api().leggi_formati) Promise.resolve(api().leggi_formati()).then(mostraFormati);
+}
+function cambiaFormato(box){
+  var scelti = _caselleFormato().filter(function(c){ return c.checked; }).map(function(c){ return c.value; });
+  if(scelti.length === 0){            // mai zero formati: rimetto la spunta e spiego
+    box.checked = true;
+    toast('warn', t('t.fmtOneTitle'), t('t.fmtOneDesc'));
+    return;
+  }
+  if(api() && api().salva_formati) Promise.resolve(api().salva_formati(scelti)).then(mostraFormati);
+}
 function modificaChiave(){
   document.getElementById('set-edit').hidden = false;
   document.getElementById('set-key').focus();

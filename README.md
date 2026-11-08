@@ -1,7 +1,7 @@
 # Trascrivi Lezioni (lecture-transcriber)
 
 Turn your **lectures** — audio/video files, or **links** (YouTube / Webex) — into clean,
-nicely formatted, translated **Word documents**, automatically. Powered by Google Gemini.
+nicely formatted, translated **Word documents** (or plain text / Markdown), automatically. Powered by Google Gemini.
 
 Made to be simple enough for non-technical people. Pick one of the three ways below.
 
@@ -69,6 +69,7 @@ The app (and Colab) need a free personal key from Google:
 1. Add your lectures: choose a **file** on your computer, or paste a **link** (YouTube/Webex).
 2. Choose the output **languages** (Italian and English by default).
 3. Start — the app transcribes, cleans up the text and writes a **Word document** per language.
+   Prefer plain text or Markdown? Tick `.txt` / `.md` in **Settings** (⚙) — you can pick more than one.
    (Webex "personal room" recordings also need a `cookies.txt` exported from your browser.)
 
 ## ⏳ If it's slow, or a lecture stops with a "server busy" message

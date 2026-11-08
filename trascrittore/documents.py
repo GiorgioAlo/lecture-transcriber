@@ -1,7 +1,11 @@
-"""FASE 4 — Generazione dei documenti Word (.docx).
+"""FASE 4 — Generazione dei documenti finali (Word, testo semplice, Markdown).
 
 Prende il testo finale di una lingua e produce un documento impaginato:
 copertina + paragrafi, con le domande in corsivo e i timestamp in grassetto.
+
+Il testo viene letto UNA volta in "blocchi" (titolo / punto elenco / paragrafo,
+vedi `_blocchi`); i tre formati sono solo modi diversi di scrivere quei blocchi,
+cosi Word, .txt e .md hanno sempre gli stessi paragrafi e gli stessi titoli.
 """
 from __future__ import annotations
 
@@ -51,7 +55,7 @@ def _aggiungi_paragrafo(doc, testo):
     for k, frase in enumerate(frasi):
         if k:
             para.add_run(" ")                                   # spazio tra le frasi
-        is_q = frase.rstrip().rstrip(")]\"'”’»").endswith("?")  # domanda = finisce con "?"
+        is_q = _e_domanda(frase)
         for i, part in enumerate(TIMESTAMP_RE.split(frase)):
             if not part:
                 continue
@@ -132,18 +136,18 @@ def _reflow(righe: list[str]) -> list[str]:
     return paras
 
 
-def genera_docx(testo: str, path: Path, titolo: str, note: str) -> Path:
-    """Scrive il documento Word e ritorna il percorso creato."""
-    doc = Document()
-    _aggiungi_copertina(doc, titolo, f"Generato il {datetime.now():%d/%m/%Y %H:%M}", note)
+# --- Lettura del testo in blocchi (comune a tutti i formati) --------------
+def _blocchi(testo: str) -> list[tuple[str, str]]:
+    """Divide il testo finale in blocchi ("titolo" | "punto" | "para", testo).
+
+    La prosa viene accumulata e passata al reflow; un titolo o un elenco puntato
+    interrompe il flusso (viene emesso cosi com'e'), poi la prosa riprende."""
     testo = (testo or "").replace("\r\n", "\n").replace("\r", "\n").strip()
-    # Accumuliamo la prosa e la mandiamo al reflow; un titolo o un elenco puntato
-    # interrompe il flusso (viene emesso cosi com'e'), poi la prosa riprende.
+    blocchi: list[tuple[str, str]] = []
     prosa: list[str] = []
 
     def _svuota_prosa():
-        for p in _reflow(prosa):
-            _aggiungi_paragrafo(doc, p)
+        blocchi.extend(("para", p) for p in _reflow(prosa))
         prosa.clear()
 
     for riga in (testo.split("\n") if testo else []):
@@ -152,16 +156,172 @@ def genera_docx(testo: str, path: Path, titolo: str, note: str) -> Path:
             continue
         if _sembra_titolo(s):
             _svuota_prosa()
-            doc.add_paragraph(s.rstrip(":"), style="Heading 2")
+            blocchi.append(("titolo", s.rstrip(":")))
         elif s.startswith(("• ", "- ", "* ")):
             _svuota_prosa()
-            doc.add_paragraph(s.lstrip("•-* ").strip(), style="List Bullet")
+            blocchi.append(("punto", s.lstrip("•-* ").strip()))
         else:
             prosa.append(s)
     _svuota_prosa()
+    return blocchi
+
+
+def _sottotitolo() -> str:
+    return f"Generato il {datetime.now():%d/%m/%Y %H:%M}"
+
+
+def _e_domanda(frase: str) -> bool:
+    """Domanda = la frase finisce con "?" (anche prima di virgolette/parentesi)."""
+    return frase.rstrip().rstrip(")]\"'”’»").endswith("?")
+
+
+# --- Word (.docx) ----------------------------------------------------------
+def genera_docx(testo: str, path: Path, titolo: str, note: str) -> Path:
+    """Scrive il documento Word e ritorna il percorso creato."""
+    doc = Document()
+    _aggiungi_copertina(doc, titolo, _sottotitolo(), note)
+    for tipo, contenuto in _blocchi(testo):
+        if tipo == "titolo":
+            doc.add_paragraph(contenuto, style="Heading 2")
+        elif tipo == "punto":
+            doc.add_paragraph(contenuto, style="List Bullet")
+        else:
+            _aggiungi_paragrafo(doc, contenuto)
     # Salvataggio atomico: scrive un .docx temporaneo e poi lo rinomina, cosi un
     # kill a meta' (Annulla immediato) non lascia un documento corrotto.
     tmp, finale = util.percorso_atomico(path)
     doc.save(tmp)
     util.concludi_atomico(tmp, finale)
     return path
+
+
+def _unisci(pezzi: list[tuple[str, str]]) -> str:
+    """Unisce i blocchi gia' scritti: riga vuota tra un blocco e l'altro, ma i
+    punti elenco consecutivi restano attaccati (un elenco unico, non spezzato)."""
+    righe: list[str] = []
+    prec = ""
+    for tipo, riga in pezzi:
+        if righe and not (tipo == "punto" and prec == "punto"):
+            righe.append("")
+        righe.append(riga)
+        prec = tipo
+    return "\n".join(righe) + "\n"
+
+
+# --- Testo semplice (.txt) -------------------------------------------------
+def genera_txt(testo: str, path: Path, titolo: str, note: str) -> Path:
+    """Scrive il documento come testo semplice (UTF-8). Stessi paragrafi del
+    Word, ma senza formattazione: i titoli stanno su una riga da soli e gli
+    elenchi iniziano con "•"."""
+    testa = [titolo, _sottotitolo()] + ([note] if note else [])
+    sep = "=" * min(70, max(len(r) for r in testa))
+    pezzi: list[tuple[str, str]] = [("testa", "\n".join(testa + [sep]))]
+    for tipo, contenuto in _blocchi(testo):
+        pezzi.append((tipo, "• " + contenuto if tipo == "punto" else contenuto))
+    util.scrivi_testo(path, _unisci(pezzi))
+    return path
+
+
+# --- Markdown (.md) --------------------------------------------------------
+# Caratteri che in Markdown cambiano la formattazione ovunque nella riga...
+_MD_SPECIALI = re.compile(r"([\\`*_<])")
+# ...e quelli che la cambiano solo A INIZIO riga (titolo, citazione, elenco).
+_MD_INIZIO_RIGA = re.compile(r"^(?:[#>+=-]|\d+(?=[.)](?:\s|$)))")
+
+
+def _md_testo(s: str) -> str:
+    """Neutralizza i caratteri speciali dentro la riga (asterischi, trattini
+    bassi, ...), cosi il testo della lezione resta testo e non diventa formattazione."""
+    return _MD_SPECIALI.sub(r"\\\1", s)
+
+
+def _md_riga(s: str) -> str:
+    """Come `_md_testo`, ma per un testo che sta A INIZIO riga: anche "# ...",
+    "> ...", "- ...", "2024. ..." non devono diventare titolo/citazione/elenco."""
+    s = _md_testo(s)
+    m = _MD_INIZIO_RIGA.match(s)
+    if not m:
+        return s
+    if m.group(0)[0].isdigit():      # "2024. Quell'anno" -> "2024\. Quell'anno"
+        return s[:m.end()] + "\\" + s[m.end():]
+    return "\\" + s
+
+
+def _md_paragrafo(testo: str) -> str:
+    """Un paragrafo in Markdown: timestamp in **grassetto**, domande in *corsivo*
+    (come nel Word, frase per frase)."""
+    frasi_md: list[str] = []
+    for frase in (_dividi_frasi(testo) or [testo]):
+        is_q = _e_domanda(frase)
+        pezzi: list[str] = []
+        for i, part in enumerate(TIMESTAMP_RE.split(frase)):
+            if not part:
+                continue
+            if i % 2:                                   # un timestamp
+                pezzi.append(f"**[{part}]**")
+                continue
+            primo = not pezzi and not frasi_md          # il paragrafo inizia qui
+            esc = _md_riga(part) if primo else _md_testo(part)
+            nucleo = esc.strip()
+            if is_q and nucleo:                         # corsivo senza inglobare gli spazi
+                sx = esc[:len(esc) - len(esc.lstrip())]
+                dx = esc[len(esc.rstrip()):]
+                esc = f"{sx}*{nucleo}*{dx}"
+            pezzi.append(esc)
+        frasi_md.append("".join(pezzi))
+    return " ".join(frasi_md)
+
+
+def genera_md(testo: str, path: Path, titolo: str, note: str) -> Path:
+    """Scrive il documento in Markdown (UTF-8): # titolo, ## titoli interni,
+    - elenchi, timestamp in grassetto e domande in corsivo. Aperto in Obsidian,
+    Notion, VS Code, GitHub... appare impaginato quasi come il Word."""
+    testa = ["# " + _md_testo(titolo), "", f"*{_sottotitolo()}*"]
+    if note:
+        testa[-1] += "  "                       # due spazi in fondo = a capo in Markdown
+        testa.append(f"*{_md_testo(note)}*")
+    testa += ["", "---"]
+    pezzi: list[tuple[str, str]] = [("testa", "\n".join(testa))]
+    for tipo, contenuto in _blocchi(testo):
+        if tipo == "titolo":
+            pezzi.append((tipo, "## " + _md_testo(contenuto)))
+        elif tipo == "punto":
+            pezzi.append((tipo, "- " + _md_testo(contenuto)))
+        else:
+            pezzi.append((tipo, _md_paragrafo(contenuto)))
+    util.scrivi_testo(path, _unisci(pezzi))
+    return path
+
+
+# --- Scelta dei formati ----------------------------------------------------
+# Ordine fisso (anche dei file prodotti): Word, poi testo, poi Markdown.
+GENERATORI = {"docx": genera_docx, "txt": genera_txt, "md": genera_md}
+FORMATI = tuple(GENERATORI)
+FORMATI_DEFAULT = ("docx",)
+_SINONIMI = {"word": "docx", "doc": "docx", "markdown": "md", "text": "txt", "testo": "txt"}
+
+
+def normalizza_formati(formati) -> list[str]:
+    """Pulisce una scelta di formati (dalla UI, dalla CLI, da un file): tiene solo
+    quelli conosciuti, senza doppioni, nell'ordine fisso. Vuota -> Word."""
+    if isinstance(formati, str):
+        formati = formati.replace(",", " ").split()
+    scelti = set()
+    for f in (formati or []):
+        f = str(f).strip().lower().lstrip(".")
+        scelti.add(_SINONIMI.get(f, f))
+    return [f for f in FORMATI if f in scelti] or list(FORMATI_DEFAULT)
+
+
+def percorso_documento(base: Path, formato: str) -> Path:
+    """`base` + estensione. NON usa with_suffix: un nome con un punto
+    ("Lez. 3_IT") perderebbe il pezzo dopo il punto."""
+    base = Path(base)
+    return base.parent / f"{base.name}.{formato}"
+
+
+def genera(testo: str, base: Path, titolo: str, note: str, formati) -> list[Path]:
+    """Scrive un documento per ogni formato scelto. `base` = percorso SENZA
+    estensione (es. .../Lezione_IT). Ritorna i percorsi creati, in ordine."""
+    return [GENERATORI[f](testo, percorso_documento(base, f), titolo, note)
+            for f in normalizza_formati(formati)]

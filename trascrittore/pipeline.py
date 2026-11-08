@@ -68,6 +68,7 @@ class Job:
     url: str | None = None             # link da scaricare (YouTube, Webex...) invece di un file
     cookies: str | None = None         # file cookies.txt (per Webex), tenuto solo in RAM
     password: str | None = None        # password del video (Webex), facoltativa
+    formati: list[str] = field(default_factory=lambda: ["docx"])   # formati dei documenti: docx/txt/md
 
 
 @dataclass
@@ -76,7 +77,7 @@ class Risultato:
     work_dir: Path
     lingua_sorgente: str               # codice della lingua parlata rilevata
     testi: dict[str, str] = field(default_factory=dict)   # codice lingua → testo finale
-    documenti: list[Path] = field(default_factory=list)   # .docx generati
+    documenti: list[Path] = field(default_factory=list)   # documenti generati (.docx/.txt/.md)
     blocchi_falliti: int = 0
     completo: bool = True
 
@@ -219,8 +220,14 @@ def fase_testo(job: Job, client, reporter: Reporter, work_dir: Path, raw: str, r
     reporter.fase(3, "fatta"); reporter.avanzamento(_pct(3))
     stop_se_annullato()
 
-    # ---- FASE 4: documenti Word ----
+    # ---- FASE 4: documenti finali (Word e/o .txt/.md, secondo job.formati) ----
     reporter.fase(4, "attiva")
+    formati = documents.normalizza_formati(job.formati)
+    # Una lezione chiamata "testo"/"pulito" darebbe "testo_IT.txt", che su Windows e
+    # Mac (nomi senza maiuscole/minuscole) E' il file di cache "testo_it.txt":
+    # lo sovrascriverebbe. Raro, ma costa una riga evitarlo.
+    if nome.lower() in ("testo", "pulito"):
+        nome += "_lezione"
     fonte = "trascrizione fornita" if job.testo else config.ASR_MODEL
     nota = f"Trascrizione: {fonte} | Pulizia e traduzione: Gemini ({config.TEXT_MODEL})"
     if job.corso:
@@ -229,10 +236,16 @@ def fase_testo(job: Job, client, reporter: Reporter, work_dir: Path, raw: str, r
     for k, lang in enumerate(job.lingue_output):
         nome_lingua = languages.nome_italiano(lang)
         titolo = f"Lezione — {job.nome} ({nome_lingua})"
-        path = work_dir / f"{nome}_{lang.upper()}.docx"
-        documents.genera_docx(testi.get(lang, ""), path, titolo, nota)
-        reporter.log(f"💾 {path.name}")
-        documenti.append(path)
+        base = work_dir / f"{nome}_{lang.upper()}"
+        # Via i documenti di una run precedente in formati ora NON scelti: senza,
+        # al riavvio la scheda li conterebbe ancora (e "Salva" li copierebbe).
+        for f in documents.FORMATI:
+            vecchio = documents.percorso_documento(base, f)
+            if f not in formati and vecchio.exists():
+                vecchio.unlink(missing_ok=True)
+        for path in documents.genera(testi.get(lang, ""), base, titolo, nota, formati):
+            reporter.log(f"💾 {path.name}")
+            documenti.append(path)
         reporter.avanzamento(_pct(4, (k + 1) / max(1, len(job.lingue_output))))
     reporter.fase(4, "fatta"); reporter.avanzamento(100.0)
 

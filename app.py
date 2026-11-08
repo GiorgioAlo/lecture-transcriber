@@ -26,7 +26,7 @@ from pathlib import Path
 
 import webview
 
-from trascrittore import Job, aggiornamenti, config, percorsi, worker
+from trascrittore import Job, aggiornamenti, config, documents, percorsi, preferenze, worker
 from trascrittore import chiave as apikey
 from trascrittore import download as dl
 from trascrittore.audio import durata
@@ -52,6 +52,13 @@ except AttributeError:
     _DIALOG_OPEN = webview.OPEN_DIALOG
     _DIALOG_SAVE = webview.SAVE_DIALOG
     _DIALOG_FOLDER = webview.FOLDER_DIALOG
+
+# Filtro della finestra "Salva con nome" secondo il formato del documento.
+_TIPI_FILE = {
+    ".docx": "Documento Word (*.docx)",
+    ".txt": "Testo semplice (*.txt)",
+    ".md": "Markdown (*.md)",
+}
 
 
 class ReporterWeb(Reporter):
@@ -280,7 +287,7 @@ class Api:
 
         Apre la cartella dove l'utente ha salvato; ma se quella cartella non
         esiste piu' o NON contiene piu' i documenti (li ha cancellati/spostati),
-        ripiega sulla copia interna nella cache (che tiene comunque i .docx).
+        ripiega sulla copia interna nella cache (che tiene comunque i documenti).
         """
         key = str(path)
         ris = self._fatte.get(key)
@@ -313,7 +320,7 @@ class Api:
         return {"ok": True}
 
     def salva(self, path):
-        """Salva i .docx di QUELLA lezione dove sceglie l'utente (ibrido).
+        """Salva i documenti di QUELLA lezione dove sceglie l'utente (ibrido).
 
         1 documento  -> finestra "Salva con nome" (col nome gia proposto).
         2+ documenti -> finestra "Scegli cartella", poi li copio tutti dentro.
@@ -333,9 +340,10 @@ class Api:
             if not docs:
                 return
             if len(docs) == 1:
+                tipo = _TIPI_FILE.get(docs[0].suffix.lower(), f"Documento (*{docs[0].suffix})")
                 scelto = self._su_thread_gui(lambda: self._window.create_file_dialog(
                     _DIALOG_SAVE, save_filename=docs[0].name,
-                    file_types=("Documento Word (*.docx)", "Tutti i file (*.*)")))
+                    file_types=(tipo, "Tutti i file (*.*)")))
                 destino = scelto[0] if isinstance(scelto, (list, tuple)) else scelto
                 if not destino:
                     return
@@ -481,6 +489,15 @@ class Api:
             "segnalazione": bool(aggiornamenti.url_segnalazione()),
         }
 
+    def leggi_formati(self):
+        """Formati dei documenti scelti nelle Impostazioni (es. ["docx", "txt"])."""
+        return preferenze.formati()
+
+    def salva_formati(self, formati):
+        """Salva i formati scelti nelle Impostazioni; ritorna la scelta ripulita
+        (mai vuota: se arrivasse vuota torna Word)."""
+        return preferenze.salva_formati(formati)
+
     def apri_segnalazione(self):
         """Apre il Google Form 'Segnala un problema' col numero di versione gia'
         pre-compilato. {'ok': False} se il form non e' configurato (la UI allora
@@ -543,14 +560,11 @@ class Api:
         for d in sorted(OUT_BASE.iterdir()):
             if not d.is_dir():
                 continue
-            docx = sorted(d.glob("*.docx"))
-            if not docx:
-                continue
-            self._snellisci(d)   # pulizia una-tantum: libera i blocchi audio di run vecchie
             nome = d.name
             lingue = []
             cartella_salvata = ""
             src = ""                      # path/url sorgente originale (per evitare doppioni al re-add)
+            nomi_doc = None               # nomi dei documenti (meta.json delle versioni >= 1.3)
             meta_f = d / "meta.json"
             if meta_f.exists():
                 try:
@@ -559,16 +573,28 @@ class Api:
                     lingue = [str(x).lower() for x in m.get("lingue", [])]
                     cartella_salvata = str(m.get("cartella_salvata", "") or "")
                     src = str(m.get("path", "") or "")
+                    if isinstance(m.get("documenti"), list):
+                        nomi_doc = [str(x) for x in m["documenti"]]
                 except Exception:
                     pass
-            if not lingue:  # deduci dai nomi file <nome>_<LANG>.docx
-                lingue = [p.stem.rsplit("_", 1)[-1].lower() for p in docx]
+            # I documenti sono quelli elencati in meta.json (possono essere .docx,
+            # .txt, .md). NON si cercano i *.txt nella cartella: li' ci sono anche i
+            # file di lavoro (grezza.txt, testo_it.txt...). Meta vecchio: solo i Word.
+            if nomi_doc is not None:
+                docs = [d / n for n in nomi_doc if (d / n).exists()]
+            else:
+                docs = sorted(d.glob("*.docx"))
+            if not docs:
+                continue
+            self._snellisci(d)   # pulizia una-tantum: libera i blocchi audio di run vecchie
+            if not lingue:  # deduci dai nomi file <nome>_<LANG>.<ext>
+                lingue = list(dict.fromkeys(p.stem.rsplit("_", 1)[-1].lower() for p in docs))
             chiave = str(d)  # identita' stabile della scheda ripristinata
             self._fatte[chiave] = Risultato(
-                nome=nome, work_dir=d, lingua_sorgente="", documenti=list(docx))
+                nome=nome, work_dir=d, lingua_sorgente="", documenti=list(docs))
             if cartella_salvata:
                 self._cartella_salvata[chiave] = cartella_salvata  # 'Apri cartella' -> cartella vera
-            n_doc = len(docx)
+            n_doc = len(docs)
             voci.append({
                 "nome": nome, "path": chiave, "documenti": n_doc,
                 "lingue": ", ".join(x.upper() for x in lingue),
@@ -581,7 +607,8 @@ class Api:
         """Salva un meta.json nella cartella di lavoro: serve a ripristinare la
         scheda 'completata' (nome vero + lingue) alla prossima apertura."""
         try:
-            meta = {"nome": ris.nome, "path": str(path), "lingue": list(lingue)}
+            meta = {"nome": ris.nome, "path": str(path), "lingue": list(lingue),
+                    "documenti": [Path(d).name for d in ris.documenti]}
             (ris.work_dir / "meta.json").write_text(
                 json.dumps(meta, ensure_ascii=False), encoding="utf-8")
         except Exception:
@@ -621,7 +648,7 @@ class Api:
             traceback.print_exc()
 
     def _autosave(self, path, ris, cartella):
-        """Copia i .docx della lezione nella cartella scelta a inizio batch e
+        """Copia i documenti della lezione nella cartella scelta a inizio batch e
         aggiorna la scheda (come un salvataggio manuale, ma automatico)."""
         try:
             salvati = []
@@ -739,13 +766,14 @@ class Api:
             # solo in quel caso — non ha senso richiederli se funzionano ancora.
             self._js("appLavoroFinito()")
 
-    def _costruisci_job(self, l, lingue, corso):
+    def _costruisci_job(self, l, lingue, corso, formati):
         """Crea il Job per una voce della coda. Puo' sollevare DownloadFallito
         (link Webex senza cookie): l'errore verra' mostrato sulla sua scheda."""
         key = l["path"]
         tipo = l.get("tipo", "file")
         if tipo == "file":
-            return Job(sorgente=Path(key), nome=Path(key).stem, lingue_output=lingue, corso=corso)
+            return Job(sorgente=Path(key), nome=Path(key).stem, lingue_output=lingue, corso=corso,
+                       formati=formati)
         webex = (tipo == "webex") or dl.e_webex(key)
         cookies = self._cookies_webex if webex else None
         if webex and not cookies:
@@ -760,7 +788,7 @@ class Api:
         if not nome or "://" in nome or nome.startswith(("http", "www.")):
             host = key.split("://", 1)[-1].split("/", 1)[0].replace("www.", "") or "link"
             nome = f"Lezione ({host})"
-        return Job(url=key, nome=nome, lingue_output=lingue,
+        return Job(url=key, nome=nome, lingue_output=lingue, formati=formati,
                    corso=corso, cookies=cookies, password=(l.get("password") or None))
 
     # --- log di debug della coda -------------------------------------------
@@ -817,6 +845,9 @@ class Api:
         lezioni = [l for l in lavoro.get("lezioni", []) if l.get("path")]
         lingue = lavoro.get("lingue", ["it", "en"])
         corso = lavoro.get("corso", "")
+        # Formati dei documenti: li legge Python dalle preferenze (unica fonte di
+        # verita'), cosi non dipendono da cosa la pagina ricorda o no.
+        formati = preferenze.formati()
 
         chiave = apikey.leggi()
         if lezioni and not chiave:
@@ -837,7 +868,7 @@ class Api:
         for l in lezioni:
             key = l["path"]
             try:
-                job = self._costruisci_job(l, lingue, corso)
+                job = self._costruisci_job(l, lingue, corso, formati)
             except DownloadFallito as e:
                 self._js("appLavoroPartito(" + json.dumps(key) + ")")
                 self._js("appErrore(" + json.dumps(key) + "," +
@@ -854,7 +885,7 @@ class Api:
             return
 
         self._log_debug("=" * 60)
-        self._log_debug(f"NUOVO BATCH: {len(jobs)} lezioni  lingue={lingue}  "
+        self._log_debug(f"NUOVO BATCH: {len(jobs)} lezioni  lingue={lingue}  formati={formati}  "
                         f"cartella={self._cartella_batch!r}  "
                         f"ASR_WORKER={config.ASR_WORKER} PREFETCH={config.PREFETCH_LEZIONI}")
         for n, k in enumerate(keys):

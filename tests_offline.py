@@ -105,6 +105,31 @@ check("'OK.' NON e' titolo", documents._sembra_titolo("OK.") is False)
 check("'NON CAPISCO.' NON e' titolo", documents._sembra_titolo("NON CAPISCO.") is False)
 check("'ARCHITETTURA' e' titolo", documents._sembra_titolo("ARCHITETTURA") is True)
 
+print("\n#  formati dei documenti: docx / txt / md")
+check("formati: vuoto -> solo Word", documents.normalizza_formati([]) == ["docx"])
+check("formati: ordine fisso, niente doppioni, sconosciuti scartati",
+      documents.normalizza_formati(["md", "pdf", "TXT", ".md", "word"]) == ["docx", "txt", "md"])
+check("formati: stringa 'txt,md'", documents.normalizza_formati("txt,md") == ["txt", "md"])
+check("percorso con un punto nel nome NON perde pezzi",
+      documents.percorso_documento(tmp / "Lez. 3_IT", "md").name == "Lez. 3_IT.md")
+testo_f = ("INTRODUZIONE:\nUsiamo *asterischi* e var_name. [00:10:30] Primo punto.\n"
+           "Che cos'e' un attacco? Lo vediamo.\n- uno\n- due\n# non un titolo\n")
+creati = documents.genera(testo_f, tmp / "Lez. 3_IT", "Lezione — Prova", "nota", ["txt", "md", "docx"])
+check("genera: un file per formato, in ordine docx/txt/md",
+      [p.suffix for p in creati] == [".docx", ".txt", ".md"] and all(p.exists() for p in creati))
+txt = creati[1].read_text(encoding="utf-8")
+check("txt: titolo + intestazione interna + punti elenco attaccati",
+      txt.startswith("Lezione — Prova\n") and "\nINTRODUZIONE\n" in txt and "• uno\n• due" in txt)
+check("txt: timestamp lasciato com'e'", "[00:10:30]" in txt)
+md = creati[2].read_text(encoding="utf-8")
+check("md: titolo, ## intestazione, elenco", md.startswith("# Lezione — Prova\n") and "## INTRODUZIONE" in md
+      and "- uno\n- due" in md)
+check("md: timestamp in grassetto, domanda in corsivo",
+      "**[00:10:30]**" in md and "*Che cos'e' un attacco?*" in md)
+check("md: asterischi/trattini bassi del testo neutralizzati", "\\*asterischi\\*" in md and "var\\_name" in md)
+check("md: '#' a inizio paragrafo NON diventa un titolo", "\n\\# non un titolo" in md)
+check("md: '2024.' a inizio paragrafo NON diventa un elenco", documents._md_riga("2024. Anno") == "2024\\. Anno")
+
 print("\n#6 download _scaricati_completi (esclude i parziali)")
 dtmp = Path(tempfile.mkdtemp())
 (dtmp / "scaricato.webm.part").write_text("parziale")
