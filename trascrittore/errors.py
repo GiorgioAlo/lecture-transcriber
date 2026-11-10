@@ -34,3 +34,16 @@ class ContenutoBloccato(ErrorePipeline):
     """Gemini ha RIFIUTATO di elaborare l'audio/il testo (filtro di sicurezza,
     copyright/recitation, blocklist). Non c'e' nulla da ritentare: la risposta
     torna senza candidati. Distinta dalle altre per dare un messaggio chiaro."""
+
+
+class ModelloNonDisponibile(ErrorePipeline):
+    """Google ha RITIRATO (o reso inaccessibile) un modello Gemini che l'app usa.
+    Sollevata SOLO quando il ritiro e' CERTO: l'API risponde 404 NOT_FOUND citando
+    quel modello E una verifica con `models.get` conferma che non esiste piu'
+    (vedi gemini.con_retry). Ritentare e' inutile e passare alla lezione dopo
+    pure: va fermata tutta la coda, come per il limite giornaliero."""
+
+    def __init__(self, modello: str):
+        self.modello = modello
+        super().__init__(f"Il modello Gemini '{modello}' non è più disponibile "
+                         "(Google l'ha ritirato).")

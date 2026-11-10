@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import math
 import random
+import re
 import time
 from typing import Callable, TypeVar
 
@@ -15,7 +16,8 @@ from google import genai
 from google.genai import types
 
 from . import config
-from .errors import ChiaveMancante, ContenutoBloccato, Interrotto, LimiteGiornaliero
+from .errors import (ChiaveMancante, ContenutoBloccato, Interrotto, LimiteGiornaliero,
+                     ModelloNonDisponibile)
 
 # Nasconde i warning rumorosi del client (AFC / non-text-parts).
 for _n in ("google_genai.models", "google_genai.types", "google_genai"):
@@ -122,12 +124,40 @@ def _dettagli_errore(e: Exception) -> tuple[int | None, bool]:
     return rd, per_giorno
 
 
+def _sembra_modello_ritirato(e: Exception, modello: str) -> bool:
+    """Primo indizio di modello ritirato: 404 NOT_FOUND che cita PROPRIO `modello`.
+
+    Misurato il 2026-11-10: un modello ritirato risponde come un nome inventato,
+    'models/<nome> is not found for API version v1beta, or is not supported for
+    generateContent'. Il nome nel messaggio evita di confondere un 404 su altro
+    (es. un file caricato)."""
+    if getattr(e, "code", None) != 404 or getattr(e, "status", None) != "NOT_FOUND":
+        return False
+    testo = f"{getattr(e, 'message', '') or ''} {e}"
+    return re.search(rf"models/{re.escape(modello)}(?![\w.-])", testo) is not None
+
+
+def _ritiro_confermato(client, modello: str) -> bool:
+    """Seconda prova (gratuita): chiede a Google se il modello esiste ancora.
+
+    True SOLO se anche `models.get` risponde 404 NOT_FOUND. Se dice che esiste,
+    o fallisce per altro (rete, 503...), il ritiro NON e' certo → False e si
+    ritenta come sempre."""
+    try:
+        client.models.get(model=modello)
+    except Exception as e:
+        return getattr(e, "code", None) == 404 and getattr(e, "status", None) == "NOT_FOUND"
+    return False
+
+
 def con_retry(
     azione: Callable[[], T],
     descrizione: str,
     log: Callable[[str], None] = lambda _m: None,
     interrotto: Callable[[], bool] | None = None,
     max_tentativi: int = config.MAX_TENTATIVI,
+    client=None,
+    modello: str | None = None,
 ) -> T:
     """Esegue `azione()` riprovando sugli errori temporanei.
 
@@ -139,6 +169,11 @@ def con_retry(
 
     `interrotto`: se fornita, l'attesa tra un tentativo e l'altro e' annullabile
     (solleva Interrotto entro ~1s invece di dormire l'intero ritardo).
+
+    `client` + `modello`: se forniti, un 404 che cita quel modello viene
+    verificato con `models.get`; se Google conferma che il modello non esiste
+    piu' → ModelloNonDisponibile SUBITO, senza ritentare. Ogni altro errore
+    (503/500/429/timeout/rete, o ritiro non confermato) segue la strada solita.
     """
     for tentativo in range(1, max_tentativi + 1):
         try:
@@ -146,6 +181,11 @@ def con_retry(
         except ContenutoBloccato:
             raise               # Gemini ha rifiutato il contenuto: inutile ritentare
         except Exception as e:
+            if (client is not None and modello
+                    and _sembra_modello_ritirato(e, modello)
+                    and _ritiro_confermato(client, modello)):
+                log(f"🛑 [{descrizione}] il modello {modello} non esiste più (ritirato da Google)")
+                raise ModelloNonDisponibile(modello) from e
             rd, per_giorno = _dettagli_errore(e)
             if per_giorno:
                 log(f"🛑 [{descrizione}] quota giornaliera esaurita")

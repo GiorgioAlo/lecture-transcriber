@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 
 from . import config, documents, languages, percorsi
-from .errors import ErrorePipeline
+from .errors import ErrorePipeline, ModelloNonDisponibile
 from .pipeline import Job, esegui
 from .progress import ReporterConsole
 
@@ -153,6 +153,15 @@ def main(argv: list[str] | None = None) -> int:
             continue
         try:
             completo, documenti = _esegui_lezione(job, key, out_dir, args.redo)
+        except ModelloNonDisponibile as e:
+            # Google retired a model the app uses: every other lecture would fail too.
+            print(f"[x] Google has retired the Gemini model '{e.modello}' used by this app. "
+                  "Install the latest version (pipx install --force "
+                  "git+https://github.com/GiorgioAlo/lecture-transcriber) and run again: "
+                  "finished work is cached.",
+                  file=sys.stderr)
+            falliti += totale - i + 1
+            break
         except ErrorePipeline as e:
             print(f"[x] {e}", file=sys.stderr)
             falliti += 1

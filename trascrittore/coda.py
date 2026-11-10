@@ -23,7 +23,7 @@ import threading
 from pathlib import Path
 
 from . import config, pipeline, transcribe
-from .errors import Interrotto, LimiteGiornaliero
+from .errors import Interrotto, LimiteGiornaliero, ModelloNonDisponibile
 from .gemini import crea_client
 from .pipeline import cartella_lavoro, identita_job
 from .progress import Reporter
@@ -203,9 +203,9 @@ def esegui_coda(jobs, keys, chiave, reporter_per_lezione, work_base,
             raw = pipeline.fase_trascrizione(job, client1, rep, wd, rifai)
             ris = pipeline.fase_testo(job, client2, rep, wd, raw, rifai)
             al_termine(keys[k], ris, None)
-        except LimiteGiornaliero as e:
+        except (LimiteGiornaliero, ModelloNonDisponibile) as e:
             al_termine(keys[k], None, e)
-            break                       # tetto giornaliero: inutile proseguire
+            break                       # tetto giornaliero / modello ritirato: le altre lezioni fallirebbero uguale
         except Interrotto:
             if ferma():
                 interrotto = True

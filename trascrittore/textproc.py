@@ -15,7 +15,7 @@ import re
 from google.genai import types
 
 from . import config, languages
-from .errors import Interrotto, LimiteGiornaliero
+from .errors import Interrotto, LimiteGiornaliero, ModelloNonDisponibile
 from .gemini import IMPOSTAZIONI_SICUREZZA, con_retry
 from .progress import Reporter
 
@@ -61,8 +61,9 @@ def rileva_lingua(client, testo: str, interrotto=None) -> str:
         return (r.text or "").strip().lower()
 
     try:
-        risposta = con_retry(azione, "rilevo la lingua", interrotto=interrotto)
-    except Interrotto:
+        risposta = con_retry(azione, "rilevo la lingua", interrotto=interrotto,
+                             client=client, modello=config.TEXT_MODEL)
+    except (Interrotto, ModelloNonDisponibile):
         raise
     except Exception:
         return ingresso[0]
@@ -131,8 +132,9 @@ def deduci_materia(client, testo: str, interrotto=None) -> str:
         return (r.text or "").strip()
 
     try:
-        risposta = con_retry(azione, "deduco la materia", interrotto=interrotto)
-    except Interrotto:
+        risposta = con_retry(azione, "deduco la materia", interrotto=interrotto,
+                             client=client, modello=config.TEXT_MODEL)
+    except (Interrotto, ModelloNonDisponibile):
         raise
     except Exception:
         return ""
@@ -239,9 +241,12 @@ def _elabora_blocco(client, indice, totale, blocco, sorgente, destinazione, cors
     try:
         testo = con_retry(azione, f"blocco {indice}/{totale}", reporter.log,
                           interrotto=reporter.interrotto,
-                          max_tentativi=config.MAX_TENTATIVI_TESTO)
+                          max_tentativi=config.MAX_TENTATIVI_TESTO,
+                          client=client, modello=config.TEXT_MODEL)
         return indice, testo, False
-    except (LimiteGiornaliero, Interrotto):
+    except (LimiteGiornaliero, Interrotto, ModelloNonDisponibile):
+        # modello ritirato: niente nota "Gemini era occupato" (sarebbe falsa) →
+        # la lezione si ferma e la coda pure (vedi coda.esegui_coda)
         raise
     except Exception:
         # Blocco non elaborato dopo i tentativi (di solito Gemini occupato = 503).

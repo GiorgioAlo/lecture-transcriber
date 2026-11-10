@@ -258,7 +258,8 @@ def _genera(client, model: str, file_obj, extra: dict, reporter: Reporter, descr
         finish = str(getattr(risposta.candidates[0], "finish_reason", "")).split(".")[-1]
         return testo, finish
 
-    return con_retry(azione, descr, reporter.log, interrotto=reporter.interrotto)
+    return con_retry(azione, descr, reporter.log, interrotto=reporter.interrotto,
+                     client=client, modello=model)
 
 
 def _trascrivi_con_guardia(client, chunk_path: Path, durata_sec: float,

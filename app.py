@@ -998,7 +998,13 @@ class Api:
             "ChiaveMancante": "Impossibile procedere",
             "FfmpegMancante": "Impossibile procedere",
         }
-        if kind in titoli:
+        if kind == "ModelloNonDisponibile":
+            # il nome del modello e' gia' nel log della scheda (gemini.con_retry)
+            titolo = "Google ha ritirato un modello che l'app usa"
+            testo = ("Non dipende dalla tua lezione: Google ha spento uno dei modelli Gemini su cui "
+                     "si basa l'app. Cerca un aggiornamento dell'app; il lavoro già fatto è salvato "
+                     "e con «Riprova» riparte da dove si era fermato.")
+        elif kind in titoli:
             titolo, testo = titoli[kind], (msg or "")[:200]
         elif any(x in low for x in ("503", "unavailable", "high demand", "overloaded")):
             titolo = "Google è sovraccarico in questo momento"

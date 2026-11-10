@@ -347,5 +347,124 @@ from trascrittore.gemini import IMPOSTAZIONI_SICUREZZA
 check("4 categorie coperte", len(IMPOSTAZIONI_SICUREZZA) == 4)
 check("tutte BLOCK_NONE", all(str(s.threshold).endswith("BLOCK_NONE") for s in IMPOSTAZIONI_SICUREZZA))
 
+print("\n#  punto 8 A: modello Gemini RITIRATO (404 NOT_FOUND confermato da models.get)")
+from google.genai import errors as _gerr
+from trascrittore import gemini as _gem, coda as _coda
+from trascrittore.errors import ModelloNonDisponibile
+_old_attesa = _gem._attendi_annullabile
+_gem._attendi_annullabile = lambda s, i=None: None      # niente attese reali nei test
+
+def _err404(nome):
+    return _gerr.ClientError(404, {"error": {"code": 404, "status": "NOT_FOUND", "message":
+        f"models/{nome} is not found for API version v1beta, or is not supported for generateContent."}})
+
+class _CliModelli:
+    """Client finto: `esiste` decide cosa risponde models.get (True / False / 'rete')."""
+    def __init__(self, esiste):
+        self.n_gen = 0; self.n_get = 0; self._esiste = esiste
+        cli = self
+        class models:
+            @staticmethod
+            def generate_content(**kw):
+                cli.n_gen += 1
+                raise _err404(kw.get("model", "gemini-x"))
+            @staticmethod
+            def get(model):
+                cli.n_get += 1
+                if cli._esiste == "rete":
+                    raise ConnectionError("rete giu'")
+                if cli._esiste:
+                    return {"name": f"models/{model}"}
+                raise _gerr.ClientError(404, {"error": {"code": 404, "status": "NOT_FOUND",
+                                                        "message": f"Model is not found: models/{model}"}})
+        self.models = models
+
+def _prova(cli, usato="gemini-vecchio", atteso="gemini-vecchio", passa_client=True, max_t=4):
+    try:
+        _gem.con_retry(lambda: cli.models.generate_content(model=usato), "test", max_tentativi=max_t,
+                       client=cli if passa_client else None, modello=atteso if passa_client else None)
+    except Exception as e:
+        return e
+
+_c = _CliModelli(esiste=False)
+_e = _prova(_c)
+check("ritiro confermato -> ModelloNonDisponibile", isinstance(_e, ModelloNonDisponibile))
+check("ritiro confermato -> 1 sola chiamata (niente retry)", _c.n_gen == 1 and _c.n_get == 1)
+check("ritiro confermato -> nome del modello nell'eccezione", getattr(_e, "modello", None) == "gemini-vecchio")
+
+_c = _CliModelli(esiste=True)
+_e = _prova(_c)
+check("404 ma models.get dice che ESISTE -> retry normali",
+      _c.n_gen == 4 and not isinstance(_e, ModelloNonDisponibile))
+
+_c = _CliModelli(esiste="rete")
+_e = _prova(_c)
+check("404 ma verifica fallita per rete -> retry normali",
+      _c.n_gen == 4 and not isinstance(_e, ModelloNonDisponibile))
+
+_c = _CliModelli(esiste=False)
+_e = _prova(_c, passa_client=False)
+check("senza client/modello (es. upload) -> comportamento di sempre", _c.n_gen == 4 and _c.n_get == 0)
+
+_c = _CliModelli(esiste=False)
+_e = _prova(_c, usato="gemini-altro")
+check("404 che cita un ALTRO nome -> nessuna verifica, retry normali", _c.n_gen == 4 and _c.n_get == 0)
+check("nome-prefisso non basta (gemini-vecchio vs gemini-vecchio-2)",
+      not _gem._sembra_modello_ritirato(_err404("gemini-vecchio-2"), "gemini-vecchio"))
+check("503 -> non e' un ritiro", not _gem._sembra_modello_ritirato(
+      _gerr.ServerError(503, {"error": {"code": 503, "status": "UNAVAILABLE", "message": "high demand"}}),
+      "gemini-x"))
+
+# FASE TESTO: la pulizia si FERMA (niente nota "Gemini era occupato")
+_old_tm = config.TEXT_MODEL
+config.TEXT_MODEL = "gemini-vecchio"
+_c = _CliModelli(esiste=False)
+try:
+    textproc.pulisci(_c, _raw_in, "it", "", _RepTx())
+    check("pulizia con modello ritirato -> la lezione si ferma", False)
+except ModelloNonDisponibile:
+    check("pulizia con modello ritirato -> la lezione si ferma", True)
+_c = _CliModelli(esiste=False)
+try:
+    textproc.rileva_lingua(_c, _raw_in * 5)
+    check("rileva_lingua non maschera il ritiro con la lingua di default", False)
+except ModelloNonDisponibile:
+    check("rileva_lingua non maschera il ritiro con la lingua di default", True)
+config.TEXT_MODEL = _old_tm
+
+# CODA: al primo modello ritirato si ferma TUTTA la coda (come il limite giornaliero)
+class _PfFinto:
+    def __init__(self, *a, **k): pass
+    def start(self): return self
+    def attendi_pronta(self, k): pass
+    def completata(self, k): pass
+    def stop(self): pass
+_old = (_coda.Prefetcher, _coda.crea_client, _coda.pipeline.fase_trascrizione,
+        _coda.cartella_lavoro, _coda.identita_job)
+_tmp = Path(tempfile.mkdtemp())
+_partite = []
+def _fase_finta(job, *a, **k):
+    _partite.append(job)
+    raise ModelloNonDisponibile("gemini-vecchio")
+_coda.Prefetcher = _PfFinto
+_coda.crea_client = lambda *a, **k: object()
+_coda.pipeline.fase_trascrizione = _fase_finta
+_coda.identita_job = lambda job: job.nome
+_coda.cartella_lavoro = lambda base, nome, ident: _tmp / nome
+class _J:
+    def __init__(self, n): self.nome = n
+    def __repr__(self): return self.nome
+_jobs = [_J("L1"), _J("L2"), _J("L3")]
+_esiti = []
+try:
+    _coda.esegui_coda(_jobs, ["k1", "k2", "k3"], "chiave", lambda k: _RepTx(), _tmp,
+                      al_termine=lambda key, ris, err: _esiti.append((key, type(err).__name__)))
+finally:
+    (_coda.Prefetcher, _coda.crea_client, _coda.pipeline.fase_trascrizione,
+     _coda.cartella_lavoro, _coda.identita_job) = _old
+check("coda: si ferma alla prima lezione", _partite == [_jobs[0]])
+check("coda: la scheda riceve ModelloNonDisponibile", _esiti == [("k1", "ModelloNonDisponibile")])
+_gem._attendi_annullabile = _old_attesa
+
 print(f"\n==== RISULTATO: {ok} PASS, {ko} FAIL ====")
 raise SystemExit(1 if ko else 0)

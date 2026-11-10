@@ -31,10 +31,12 @@ from .errors import (
     LimiteGiornaliero,
     Interrotto,
     FfmpegMancante,
+    ModelloNonDisponibile,
 )
 
 __all__ = [
     "Job", "Risultato", "esegui",
     "Reporter", "ReporterConsole",
     "ErrorePipeline", "ChiaveMancante", "LimiteGiornaliero", "Interrotto", "FfmpegMancante",
+    "ModelloNonDisponibile",
 ]

@@ -7,6 +7,8 @@
   di benvenuto ha il suo selettore IT|EN.
 - Le parti che Gemini non è riuscito a ripulire o tradurre sono segnalate da un riquadro ben visibile
   (con la fine della parte grezza indicata), nella lingua del documento.
+- Se Google ritira uno dei modelli Gemini usati dall'app, l'app se ne accorge subito, si ferma con un
+  messaggio chiaro (invece di riprovare a vuoto) e il lavoro già fatto resta salvato.
 
 ## 1.2.1
 - Risolto un problema per cui l'avviso di nuova versione poteva non comparire.
