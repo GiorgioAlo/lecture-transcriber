@@ -1,0 +1,82 @@
+name: Test
+
+# Esegue i test offline (tests_offline.py) su un computer "in cloud" di GitHub,
+# cosi' un errore si vede subito (✓ verde / ✗ rossa accanto al commit) invece di
+# scoprirlo quando qualcuno usa l'app (Colab installa da main a ogni avvio!).
+#
+# I test sono OFFLINE apposta: niente chiave Gemini, niente rete, niente ffmpeg
+# (le parti che andrebbero su internet sono sostituite da finte dentro i test).
+#
+# Parte:
+#  - a ogni push su main e a ogni pull request;
+#  - a mano, dal tab "Actions" -> "Test" -> "Run workflow";
+#  - da sola una volta a settimana, anche senza push: le librerie esterne
+#    (google-genai, yt-dlp, ...) escono spesso con versioni nuove e a volte
+#    cambiano qualcosa. NB: GitHub spegne i giri programmati dopo 60 giorni
+#    senza attivita' sul repo (si riaccendono dal tab Actions).
+#
+# Due combinazioni:
+#  - Windows + Python 3.11 = come l'exe (costruito dall'ambiente conda locale);
+#  - Linux + Python 3.12   = come Colab e la CLI.
+# Su entrambi l'app si installa con "pip install ." proprio come fa chi usa la
+# CLI, cosi' si controlla anche che il pacchetto si installi bene.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"   # ogni lunedi' alle 6:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.nome }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false        # se una combinazione fallisce, l'altra va avanti lo stesso
+      matrix:
+        include:
+          - nome: Windows (Python 3.11, come l'exe)
+            os: windows-latest
+            python: "3.11"            # = la versione minima dichiarata in pyproject
+            installa: pip install .
+          - nome: Linux (Python 3.12, come Colab e la CLI)
+            os: ubuntu-latest
+            python: "3.12"
+            installa: pip install .
+
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      PYTHONUTF8: "1"             # su Windows la console non e' UTF-8: evita errori sui caratteri speciali
+      PYTHONIOENCODING: utf-8
+
+    defaults:
+      run:
+        shell: bash               # stessi comandi su Windows e Linux; si ferma al primo errore
+
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v4
+
+      - name: Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Installa l'app e le dipendenze
+        run: |
+          python -m pip install --upgrade pip
+          ${{ matrix.installa }}
+
+      - name: Versioni installate (utile se un giorno qualcosa si rompe)
+        run: pip list
+
+      - name: Test offline
+        run: python tests_offline.py
