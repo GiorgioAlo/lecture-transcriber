@@ -13,8 +13,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import config, documents, languages, textproc, transcribe, util
-from .errors import Interrotto
+from . import config, documents, languages, modelli, textproc, transcribe, util
+from .errors import Interrotto, ModelloNonDisponibile
 from .gemini import crea_client, _attendi_annullabile
 from .progress import Reporter
 
@@ -269,7 +269,12 @@ def esegui(job: Job, chiave: str, reporter: Reporter, work_base: Path, rifai: bo
     Solleva: ChiaveMancante, FfmpegMancante, Interrotto, o altri errori Gemini.
     """
     client = crea_client(chiave, config.TIMEOUT_TRASCRIZIONE_S)
+    modelli.prepara(client, reporter.log)    # modelli.json (una volta per processo)
     work_dir = cartella_lavoro(work_base, job.nome, identita_job(job))
     work_dir.mkdir(parents=True, exist_ok=True)
-    raw = fase_trascrizione(job, client, reporter, work_dir, rifai)
-    return fase_testo(job, client, reporter, work_dir, raw, rifai)
+    try:
+        raw = fase_trascrizione(job, client, reporter, work_dir, rifai)
+        return fase_testo(job, client, reporter, work_dir, raw, rifai)
+    except ModelloNonDisponibile:
+        modelli.invalida()   # il prossimo tentativo (es. Colab) rilegge modelli.json
+        raise

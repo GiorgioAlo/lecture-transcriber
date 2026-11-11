@@ -594,7 +594,9 @@ var I18N = {
     'hide':'Nascondi','starting':'Avvio…','canceling':'Annullo…',
     'cancel.one':'Annullo questa lezione… finisco il blocco in corso','cancel.all':'Annullo tutto…',
     'verifying':'Verifico…',
-    'sub.willdownload':'scaricherò l\'audio','lang.notfound':'Nessuna lingua trovata',
+    'sub.link.will':'Link · scaricherò l\'audio','sub.webex.will':'Webex · scaricherò l\'audio',
+    'sub.link.min':'Link · {m} min','sub.webex.min':'Webex · {m} min',
+    'lang.notfound':'Nessuna lingua trovata',
     'btn.needcookie':'Carica prima i cookie di Webex (qui sotto)',
     't.previewTitle':'Anteprima nel browser','t.previewSaveKey':'Apri l\'app vera per salvare la chiave.',
     't.pasteKey':'Incolla la tua chiave.','t.keyInvalid':'Chiave non valida.',
@@ -629,7 +631,56 @@ var I18N = {
     't.incompleteTitle':'Completata, alcune parti non ripulite','t.incompleteDesc':'Alcune parti non è stato possibile ripulirle (Gemini era occupato): nel documento trovi la trascrizione grezza, segnalata con ⚠️. Premi «Riprova» più tardi per ripulirle.',
     'parts.some':'alcune parti non ripulite','parts.n':'{n} parti non ripulite',
     'saved.cardN':'{n} documenti salvati','saved.card1':'documento salvato','saved.cardIn':' in {c}',
-    'quota.zero':'0 min (torna domani)'
+    'quota.zero':'0 min (torna domani)',
+    /* --- frasi che arrivano da Python come codici (py.*): vedi tr() --- */
+    'py.err.model.t':'Google ha ritirato un modello che l\'app usa',
+    'py.err.model.desc':'Non dipende dalla tua lezione: Google ha spento uno dei modelli Gemini su cui si basa l\'app. Il lavoro già fatto è salvato. Riprova più tardi con «Riprova»: appena viene indicato un modello nuovo l\'app lo usa da sola. Se continua, cerca un aggiornamento dell\'app.',
+    'py.err.model.d':'Il modello Gemini \'{modello}\' non è più disponibile (Google l\'ha ritirato).',
+    'py.err.daily.t':'Finite le lezioni di oggi',
+    'py.err.daily.d':'Hai finito le trascrizioni gratuite di oggi. Riprova domani: il lavoro già fatto viene ripreso da dove si era fermato.',
+    'py.err.busy.t':'Google è sovraccarico in questo momento',
+    'py.err.busy.d':'I server di Gemini sono molto richiesti adesso: è un intoppo temporaneo, non un problema della tua lezione. Aspetta qualche minuto e premi «Riprova» sulla scheda: il lavoro già fatto è salvato e riparte da dove si era fermato.',
+    'py.err.rate.t':'Troppe richieste in questo momento',
+    'py.err.rate.d':'Gemini sta limitando le richieste (troppe in poco tempo). Aspetta un minuto e premi «Riprova» sulla scheda: riprende da dove era.',
+    'py.err.net.t':'Problema di connessione',
+    'py.err.net.d':'Sembra un problema di rete. Controlla la connessione e premi «Riprova» sulla scheda per riprendere.',
+    'py.err.blocked.t':'Contenuto non trascrivibile',
+    'py.blocked.copyright':'Gemini riconosce nell\'audio materiale protetto da copyright (musica o clip di un programma) e non lo trascrive (motivo tecnico: {motivo}). Capita con i video di intrattenimento; con le lezioni normali non succede.',
+    'py.blocked.unsuitable':'Gemini considera questo audio non adatto e si rifiuta di trascriverlo (motivo tecnico: {motivo}). Capita con i video di intrattenimento; con le lezioni normali non succede.',
+    'py.blocked.generic':'Gemini si è rifiutato di elaborare questo audio (motivo tecnico: {motivo}). Capita con i video di intrattenimento; con le lezioni normali non succede.',
+    'py.err.dl.t':'Download non riuscito',
+    'py.dl.badurl':'Link non valido: inserisci un indirizzo che inizia con http:// o https://.',
+    'py.dl.webex':'Non riesco a scaricare da Webex. I cookie potrebbero essere scaduti (riesportali) o il video è protetto da password.',
+    'py.dl.private':'Il video è privato o richiede l\'accesso: non posso scaricarlo.',
+    'py.dl.unsupported':'Questo link non è supportato per il download.',
+    'py.dl.generic':'Non sono riuscito a scaricare l\'audio dal link (controlla il link e la connessione).',
+    'py.dl.nocookies':'Carica prima il file dei cookie di Webex (riga «Accesso Webex»).',
+    'py.err.nokey.t':'Manca la chiave',
+    'py.err.nokey.d':'Apri le Impostazioni (icona ingranaggio) e inserisci la tua chiave API.',
+    'py.err.cannot.t':'Impossibile procedere',
+    'py.err.ffmpeg.d':'{nome} non trovato. Installa ffmpeg o imposta TRASCRITTORE_FFMPEG_DIR.',
+    'py.err.add.t':'Impossibile aggiungere',
+    'py.err.generic.t':'Errore durante l\'elaborazione',
+    'py.err.fatal.t':'Errore imprevisto',
+    'py.badfile1.t':'File non valido','py.badfile1.d':'Questo non è un file audio o video, l\'ho saltato: {nomi}',
+    'py.badfileN.t':'File non validi','py.badfileN.d':'Questi non sono file audio o video, li ho saltati: {nomi}',
+    'py.docsmoved.t':'Documenti spostati o cancellati','py.docsmoved.d':'Nella cartella salvata non ci sono più: apro la copia interna dell\'app.',
+    'py.docsgone.t':'Non trovo i documenti','py.docsgone.d':'I documenti di questa lezione non ci sono più nemmeno nella cache. Rifai la trascrizione.',
+    'py.pickfolder.t':'Scegli la cartella','py.pickfolder.d':'Ci salvo i {n} documenti: {nomi}',
+    'py.savefail.t':'Salvataggio non riuscito','py.savefail.d':'Non sono riuscito a copiare i documenti nella posizione scelta.',
+    'py.savefail.auto':'Non sono riuscito a copiare i documenti nella cartella scelta; usa Salva…',
+    'py.ytdlp.ok.t':'yt-dlp aggiornato','py.ytdlp.ok.d':'Il motore di download è alla versione più recente.',
+    'py.ytdlp.ko.t':'yt-dlp non aggiornato','py.ytdlp.ko.d':'Non è stato possibile aggiornare ora. Riprova più tardi.',
+    'py.cachebusy.t':'Sto lavorando','py.cachebusy.d':'Aspetta che finiscano le trascrizioni prima di svuotare la cache.',
+    'py.sub.file':'File','py.sub.filemin':'File · {m} min',
+    'py.sub.done1':'Completata · 1 documento','py.sub.doneN':'Completata · {n} documenti',
+    'py.key.empty':'Incolla una chiave.',
+    'py.key.invalid':'La chiave non è valida. Controlla di averla copiata per intero.',
+    'py.key.nocheck':'Non riesco a verificare la chiave adesso (controlla la connessione a internet).',
+    'py.key.nosave':'Non riesco a salvare la chiave nel gestore delle password del sistema.',
+    'py.cookie.unreadable':'Non riesco a leggere il file.',
+    'py.cookie.format':'Questo non è un file di cookie valido (serve il formato Netscape, non un .txt qualsiasi).',
+    'py.cookie.nowebex':'Nel file non ci sono cookie di Webex: esportali mentre sei dentro Webex (sulla pagina della registrazione).'
   },
   en: {
     'theme.dark':'Dark theme','theme.light':'Light theme',
@@ -683,7 +734,9 @@ var I18N = {
     'hide':'Hide','starting':'Starting…','canceling':'Canceling…',
     'cancel.one':'Canceling this lecture… finishing the current block','cancel.all':'Canceling all…',
     'verifying':'Verifying…',
-    'sub.willdownload':'I\'ll download the audio','lang.notfound':'No language found',
+    'sub.link.will':'Link · I\'ll download the audio','sub.webex.will':'Webex · I\'ll download the audio',
+    'sub.link.min':'Link · {m} min','sub.webex.min':'Webex · {m} min',
+    'lang.notfound':'No language found',
     'btn.needcookie':'Load the Webex cookies first (below)',
     't.previewTitle':'Browser preview','t.previewSaveKey':'Open the real app to save the key.',
     't.pasteKey':'Paste your key.','t.keyInvalid':'Invalid key.',
@@ -718,7 +771,56 @@ var I18N = {
     't.incompleteTitle':'Completed, some parts not cleaned up','t.incompleteDesc':'Some parts couldn\'t be cleaned up (Gemini was busy): in the document you\'ll find the raw transcript, marked with ⚠️. Press «Retry» later to clean them up.',
     'parts.some':'some parts not cleaned up','parts.n':'{n} parts not cleaned up',
     'saved.cardN':'{n} documents saved','saved.card1':'document saved','saved.cardIn':' in {c}',
-    'quota.zero':'0 min (come back tomorrow)'
+    'quota.zero':'0 min (come back tomorrow)',
+    /* --- sentences that arrive from Python as codes (py.*): see tr() --- */
+    'py.err.model.t':'Google retired a model the app uses',
+    'py.err.model.desc':'It\'s not your lecture\'s fault: Google switched off one of the Gemini models the app relies on. The work done so far is saved. Try again later with «Retry»: as soon as a new model is published, the app uses it on its own. If it keeps happening, look for an app update.',
+    'py.err.model.d':'The Gemini model \'{modello}\' is no longer available (Google retired it).',
+    'py.err.daily.t':'No more lectures today',
+    'py.err.daily.d':'You have used up today\'s free transcriptions. Try again tomorrow: the work done so far resumes where it stopped.',
+    'py.err.busy.t':'Google is overloaded right now',
+    'py.err.busy.d':'Gemini\'s servers are in high demand right now: it\'s a temporary hiccup, not a problem with your lecture. Wait a few minutes and press «Retry» on the card: the work done so far is saved and resumes where it stopped.',
+    'py.err.rate.t':'Too many requests right now',
+    'py.err.rate.d':'Gemini is limiting requests (too many in a short time). Wait a minute and press «Retry» on the card: it resumes where it was.',
+    'py.err.net.t':'Connection problem',
+    'py.err.net.d':'It looks like a network problem. Check your connection and press «Retry» on the card to resume.',
+    'py.err.blocked.t':'Content cannot be transcribed',
+    'py.blocked.copyright':'Gemini recognizes copyrighted material in the audio (music or a clip from a show) and won\'t transcribe it (technical reason: {motivo}). It happens with entertainment videos; it doesn\'t with normal lectures.',
+    'py.blocked.unsuitable':'Gemini considers this audio unsuitable and refuses to transcribe it (technical reason: {motivo}). It happens with entertainment videos; it doesn\'t with normal lectures.',
+    'py.blocked.generic':'Gemini refused to process this audio (technical reason: {motivo}). It happens with entertainment videos; it doesn\'t with normal lectures.',
+    'py.err.dl.t':'Download failed',
+    'py.dl.badurl':'Invalid link: enter an address that starts with http:// or https://.',
+    'py.dl.webex':'I can\'t download from Webex. The cookies may have expired (export them again) or the video is password-protected.',
+    'py.dl.private':'The video is private or requires signing in: I can\'t download it.',
+    'py.dl.unsupported':'This link is not supported for download.',
+    'py.dl.generic':'I couldn\'t download the audio from the link (check the link and your connection).',
+    'py.dl.nocookies':'First load the Webex cookie file («Webex access» row).',
+    'py.err.nokey.t':'API key missing',
+    'py.err.nokey.d':'Open Settings (gear icon) and enter your API key.',
+    'py.err.cannot.t':'Cannot continue',
+    'py.err.ffmpeg.d':'{nome} not found. Install ffmpeg or set TRASCRITTORE_FFMPEG_DIR.',
+    'py.err.add.t':'Could not add',
+    'py.err.generic.t':'Error during processing',
+    'py.err.fatal.t':'Unexpected error',
+    'py.badfile1.t':'Invalid file','py.badfile1.d':'This is not an audio or video file, I skipped it: {nomi}',
+    'py.badfileN.t':'Invalid files','py.badfileN.d':'These are not audio or video files, I skipped them: {nomi}',
+    'py.docsmoved.t':'Documents moved or deleted','py.docsmoved.d':'They are no longer in the saved folder: I\'m opening the app\'s internal copy.',
+    'py.docsgone.t':'Documents not found','py.docsgone.d':'This lecture\'s documents are no longer in the cache either. Transcribe it again.',
+    'py.pickfolder.t':'Choose the folder','py.pickfolder.d':'I\'ll save the {n} documents there: {nomi}',
+    'py.savefail.t':'Saving failed','py.savefail.d':'I couldn\'t copy the documents to the chosen location.',
+    'py.savefail.auto':'I couldn\'t copy the documents to the chosen folder; use Save…',
+    'py.ytdlp.ok.t':'yt-dlp updated','py.ytdlp.ok.d':'The download engine is at the latest version.',
+    'py.ytdlp.ko.t':'yt-dlp not updated','py.ytdlp.ko.d':'It wasn\'t possible to update now. Try again later.',
+    'py.cachebusy.t':'Working','py.cachebusy.d':'Wait for the transcriptions to finish before clearing the cache.',
+    'py.sub.file':'File','py.sub.filemin':'File · {m} min',
+    'py.sub.done1':'Completed · 1 document','py.sub.doneN':'Completed · {n} documents',
+    'py.key.empty':'Paste a key.',
+    'py.key.invalid':'The key is not valid. Check that you copied all of it.',
+    'py.key.nocheck':'I can\'t verify the key right now (check your internet connection).',
+    'py.key.nosave':'I can\'t save the key in the system password manager.',
+    'py.cookie.unreadable':'I can\'t read the file.',
+    'py.cookie.format':'This is not a valid cookie file (it must be in Netscape format, not just any .txt).',
+    'py.cookie.nowebex':'There are no Webex cookies in the file: export them while you are inside Webex (on the recording page).'
   }
 };
 var LANG = null;
@@ -732,8 +834,22 @@ if(!LANG){
 }
 function t(key, vars){
   var s = (I18N[LANG] && I18N[LANG][key] != null) ? I18N[LANG][key] : (I18N.it[key] != null ? I18N.it[key] : key);
-  if(vars){ for(var k in vars){ s = s.replace(new RegExp('\\{'+k+'\\}','g'), vars[k]); } }
+  /* sostituzione con funzione: un valore con '$' (es. un nome file) non viene interpretato */
+  if(vars){ for(var k in vars){ (function(v){ s = s.replace(new RegExp('\\{'+k+'\\}','g'), function(){ return v; }); })(String(vars[k])); } }
   return s;
+}
+/* Frase arrivata da Python: un codice {k, v} (tradotto qui, nella lingua del momento)
+   oppure testo grezzo (es. un errore tecnico imprevisto), mostrato com'e'. */
+function tr(m){
+  if(m && typeof m === 'object' && m.k) return t(m.k, m.v);
+  return m == null ? '' : String(m);
+}
+/* Salva una frase di Python su un elemento per poterla ritradurre al cambio di lingua */
+function _salvaFrase(el, attr, m){
+  if(m && typeof m === 'object') el.dataset[attr] = JSON.stringify(m); else delete el.dataset[attr];
+}
+function _leggiFrase(el, attr){
+  try { return JSON.parse(el.dataset[attr]); } catch(e){ return null; }
 }
 function applyI18n(){
   document.documentElement.lang = LANG;
@@ -754,6 +870,17 @@ function setLang(l){
   _renderChips(); if(!document.getElementById('menu').hidden) _renderMenu();
   if(_lastQuota) appQuota(_lastQuota);
   riscriviStatiFatte();
+  riscriviFrasiPython();
+  var a = api(); if(a && a.imposta_lingua) a.imposta_lingua(LANG);   // per le finestre di sistema
+}
+/* sottotitoli e messaggi d'errore delle schede arrivati da Python come codici */
+function riscriviFrasiPython(){
+  Array.prototype.forEach.call(document.querySelectorAll('.qitem'), function(li){
+    var sub = _leggiFrase(li, 'subMsg');
+    if(sub){ var q = li.querySelector('.qsub'); if(q) q.textContent = tr(sub); }
+    var err = _leggiFrase(li, 'errMsg');
+    if(err && li.dataset.state === 'error') li.querySelector('.qdone').textContent = '⚠ ' + tr(err);
+  });
 }
 /* etichetta "N documento/i" dipendente dalla lingua (plurale IT vs EN) */
 function docLabel(n){ return LANG === 'it' ? (n + ' document' + (n===1?'o':'i')) : (n + ' document' + (n===1?'':'s')); }
@@ -786,6 +913,7 @@ window.addEventListener('pywebviewready', function(){
   var a = (window.pywebview && pywebview.api) ? pywebview.api : null;
   if(!a) return;
   if(a.ping) a.ping().then(function(r){ console.log('[ponte] ping ->', r); });
+  if(a.imposta_lingua) a.imposta_lingua(LANG);   // le finestre di sistema (apri/salva) nella lingua giusta
   if(a.lezioni_in_cache) Promise.resolve(a.lezioni_in_cache()).then(function(voci){
     (voci||[]).forEach(addDoneCard);   // ripopola 'Completate' con quel che c'e' in cache
   });
@@ -839,7 +967,7 @@ function salvaChiaveConVerifica(valore, btn, wrapErr, txtErr, onOk){
   Promise.resolve(api().salva_chiave(k)).then(function(res){
     btn.disabled = false; btn.textContent = old;
     if(res && res.ok){ _keyPreview = res.preview || ''; onOk(); }
-    else { mostraErr(wrapErr, txtErr, (res && res.errore) || t('t.keyInvalid')); }
+    else { mostraErr(wrapErr, txtErr, tr(res && res.errore) || t('t.keyInvalid')); }
   }).catch(function(){      // non lasciare MAI il bottone bloccato su "Verifico…"
     btn.disabled = false; btn.textContent = old;
     mostraErr(wrapErr, txtErr, t('t.verifyErr'));
@@ -1027,10 +1155,11 @@ function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&
 function costruisciCard(name, sub, type, path){
   var li = document.createElement('li'); li.className='qitem';
   li.dataset.name=name; li.dataset.type=type; li.dataset.path=path||'';
+  _salvaFrase(li, 'subMsg', sub);   // sottotitolo da Python (codice): si ritraduce al cambio lingua
   li.innerHTML =
     '<div class="qtop">'+
       '<span class="qicon qicon-type"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+icons[type]+'</svg></span>'+
-      '<div class="qmeta"><div class="qname">'+esc(name)+'</div><div class="qsub">'+esc(sub)+'</div></div>'+
+      '<div class="qmeta"><div class="qname">'+esc(name)+'</div><div class="qsub">'+esc(tr(sub))+'</div></div>'+
       '<span class="qbadge" data-i18n="badge.'+type+'">'+t('badge.'+type)+'</span>'+
       '<button class="qdel" data-i18n-title="card.del" title="'+t('card.del')+'" onclick="rimuoviCard(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'+
       '<button class="qcancel" onclick="annulla(this)">'+t('cancel')+'</button>'+
@@ -1087,7 +1216,7 @@ function addLink(){
   if(isWebex && !_cookiesOk){ toast('warn',t('t.needCookiesTitle'),t('t.needCookiesDesc')); return; }
   var pwd = isWebex ? (document.getElementById('webex-pwd')||{}).value : '';
   pwd = (pwd||'').trim();
-  addItem(v.length>46? v.slice(0,46)+'…' : v, (isWebex?t('badge.webex'):t('badge.link'))+' · '+t('sub.willdownload'), isWebex?'webex':'link', v);
+  addItem(v.length>46? v.slice(0,46)+'…' : v, _subLink(isWebex), isWebex?'webex':'link', v);
   var li = cardByPath(v);
   if(li && pwd) li.dataset.password = pwd;
   aggiornaInfoLink(v);                       // prova a leggere titolo + durata
@@ -1112,9 +1241,15 @@ function aggiornaInfoLink(url){
       li.dataset.name = info.titolo;
       var n = li.querySelector('.qname'); if(n) n.textContent = info.titolo;
     }
-    var s = li.querySelector('.qsub');
-    if(s) s.textContent = (info.webex?t('badge.webex'):t('badge.link')) + (info.durata_min ? ' · '+info.durata_min+' min' : ' · '+t('sub.willdownload'));
+    var sub = _subLink(info.webex, info.durata_min);
+    _salvaFrase(li, 'subMsg', sub);   // si ritraduce al cambio lingua (riscriviFrasiPython)
+    var s = li.querySelector('.qsub'); if(s) s.textContent = tr(sub);
   });
+}
+/* sottotitolo di una scheda link come codice {k, v}: "Link · scaricherò l'audio" o "Webex · 42 min" */
+function _subLink(webex, min){
+  var tipo = webex ? 'webex' : 'link';
+  return min ? {k: 'sub.' + tipo + '.min', v: {m: min}} : {k: 'sub.' + tipo + '.will', v: {}};
 }
 function caricaCookies(){
   if(api()) api().carica_cookies();
@@ -1142,7 +1277,7 @@ function appCookies(st){
     chip.className = 'chip err';
     chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg> '+t('chip.invalid');
     _cookiesOk = false; aggiornaBtnAggiungi();
-    toast('err',t('t.cookieBadTitle'), (st && st.errore) || t('t.cookieBadDesc'));
+    toast('err',t('t.cookieBadTitle'), tr(st && st.errore) || t('t.cookieBadDesc'));
   }
 }
 function cardByPath(path){
@@ -1320,7 +1455,8 @@ function appErrore(path, titolo, msg){
     _stopCreep(li);
     li.dataset.state = 'error';
     li.querySelector('.qicon').innerHTML = SVG_WARN;
-    li.querySelector('.qdone').textContent = '⚠ ' + msg;
+    _salvaFrase(li, 'errMsg', msg);    // si ritraduce al cambio lingua (riscriviFrasiPython)
+    li.querySelector('.qdone').textContent = '⚠ ' + tr(msg);
     var salva = li.querySelector('.act-salva'); if(salva) salva.hidden = true;
     var apri = li.querySelector('.act-apri'); if(apri) apri.hidden = true;
     aggiornaSezioni();
@@ -1459,6 +1595,7 @@ function svuotaCacheGlobale(){
 
 /* --- toast --- */
 function toast(kind,title,desc){
+  title = tr(title); desc = tr(desc);   // anche codici {k,v} da Python
   var t=document.createElement('div'); t.className='toast'+(kind==='err'?' err':(kind==='ok'?' ok':''));
   var ic;
   if(kind==='err') ic='<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>';

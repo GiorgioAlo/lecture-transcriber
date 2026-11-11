@@ -1,0 +1,6 @@
+{
+  "_info": "Gemini models used by the app (read at startup from GitHub, branch main). Change a name ONLY to a model that is free-tier usable (check rpm/rpd in AI Studio): the app verifies the name exists, not its quota. Must match trascrittore/config.py (offline test).",
+  "asr": {"model": "gemini-3.5-flash-lite", "rpm": 15, "rpd": 500},
+  "fallback": {"model": "gemini-3.5-transcribe", "rpm": 3, "rpd": 25},
+  "text": {"model": "gemini-3.1-flash-lite", "rpm": 15, "rpd": 500}
+}

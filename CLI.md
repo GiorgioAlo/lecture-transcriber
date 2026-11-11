@@ -7,7 +7,7 @@ documents (Word, plain text and/or Markdown), via Google Gemini.
 
 ## Requirements
 
-- **Python 3.12+**
+- **Python 3.11+**
 - **ffmpeg** (and ffprobe) on your `PATH`:
   - macOS: `brew install ffmpeg`
   - Debian/Ubuntu: `sudo apt install ffmpeg`

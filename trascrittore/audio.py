@@ -18,7 +18,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from . import percorsi
-from .errors import FfmpegMancante
+from .errors import FfmpegMancante, Messaggio
 
 # App "windowed" (senza console, come nel .exe): su Windows ogni subprocess verso
 # ffmpeg/ffprobe aprirebbe una finestra di terminale lampeggiante. CREATE_NO_WINDOW
@@ -69,9 +69,9 @@ def _verifica_ffmpeg() -> None:
         p = _trova(nome)
         # se _trova ha restituito il nome nudo e non e nel PATH, e assente
         if p == nome and shutil.which(nome) is None:
-            raise FfmpegMancante(
-                f"{nome} non trovato. Installa ffmpeg o imposta TRASCRITTORE_FFMPEG_DIR."
-            )
+            raise FfmpegMancante(Messaggio(
+                f"{nome} non trovato. Installa ffmpeg o imposta TRASCRITTORE_FFMPEG_DIR.",
+                "py.err.ffmpeg.d", nome=nome))
 
 
 def estrai_audio(sorgente: Path, dest: Path, inizio_min: float = 0, minuti: float | None = None) -> None:

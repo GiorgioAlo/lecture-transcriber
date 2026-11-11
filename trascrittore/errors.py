@@ -6,8 +6,33 @@ messaggio giusto (es. chiave mancante vs limite giornaliero vs annullo).
 from __future__ import annotations
 
 
+class Messaggio(str):
+    """Frase per l'utente: E' la frase italiana (cosi' CLI, log e chi la usa come
+    stringa non vedono differenze) ma si porta dietro il CODICE con cui l'app la
+    traduce nella lingua dell'interfaccia (dizionario I18N di ui/index.html,
+    chiavi `py.*`) e gli eventuali valori da inserire ({nome}, {n}...)."""
+
+    codice: str
+    valori: dict
+
+    def __new__(cls, testo: str, codice: str, **valori):
+        s = super().__new__(cls, testo)
+        s.codice = codice
+        s.valori = valori
+        return s
+
+
 class ErrorePipeline(Exception):
-    """Base di tutti gli errori previsti dalla pipeline."""
+    """Base di tutti gli errori previsti dalla pipeline.
+
+    Se il messaggio e' un `Messaggio`, l'errore ne ricorda codice e valori
+    (`codice`/`valori`), cosi' l'app puo' mostrarlo tradotto."""
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        primo = args[0] if args else None
+        self.codice: str | None = getattr(primo, "codice", None)
+        self.valori: dict = dict(getattr(primo, "valori", None) or {})
 
 
 class ChiaveMancante(ErrorePipeline):
@@ -43,7 +68,8 @@ class ModelloNonDisponibile(ErrorePipeline):
     (vedi gemini.con_retry). Ritentare e' inutile e passare alla lezione dopo
     pure: va fermata tutta la coda, come per il limite giornaliero."""
 
-    def __init__(self, modello: str):
+    def __init__(self, modello: str, suggerito: str | None = None):
         self.modello = modello
-        super().__init__(f"Il modello Gemini '{modello}' non è più disponibile "
-                         "(Google l'ha ritirato).")
+        self.suggerito = suggerito      # sostituto indicato da Google nel messaggio, se c'e'
+        super().__init__(Messaggio(f"Il modello Gemini '{modello}' non è più disponibile "
+                                   "(Google l'ha ritirato).", "py.err.model.d", modello=modello))

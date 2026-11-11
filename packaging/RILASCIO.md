@@ -11,7 +11,8 @@ Repo delle Release: **https://github.com/GiorgioAlo/lecture-transcriber**
 
 ## 1. Alza il numero di versione (nel codice)
 
-File: `trascrittore/config.py` → riga `VERSION = "..."`.
+File: `trascrittore/config.py` → riga `VERSION = "..."`. È l'**unico** posto: il
+pacchetto della CLI (`pyproject.toml`, versione dinamica), l'exe e il .dmg la leggono da lì.
 
 Usa **semver** `MAJOR.MINOR.PATCH`:
 - **PATCH** (`1.1.0` → `1.1.1`): correzioni di bug.
@@ -28,6 +29,10 @@ cd C:\whisper_test
 PYTHONPATH=. & C:\Users\giorg\anaconda3\envs\trascrittore\python.exe tests_offline.py
 ```
 Deve finire con `==== RISULTATO: N PASS, 0 FAIL ====`.
+
+Gli stessi test girano anche da soli su GitHub (workflow **Test**: Windows + Python 3.11
+e Linux + Python 3.12) a ogni push su `main` e ogni lunedì. Prima di rilasciare controlla
+che l'ultimo commit su GitHub abbia la **✓ verde** (tab "Actions" o accanto al commit).
 
 ## 3. Ri-builda l'.exe
 
@@ -75,3 +80,22 @@ Prova veloce: apri l'exe → **Impostazioni** → "Versione app" deve mostrare i
   informazioni → Esegui comunque". Vale la pena spiegarlo agli amici.
 - Il controllo aggiornamenti è silenzioso su ogni errore (niente rete, GitHub giù):
   non disturba mai e non blocca l'avvio.
+
+## Cambiare modello Gemini SENZA release (`modelli.json`)
+
+Se Google ritira un modello (le schede dicono *"Google ha ritirato un modello che
+l'app usa"*; nel log c'è il nome e spesso il sostituto suggerito da Google):
+
+1. Scegli il sostituto guardando la pagina **limiti** di AI Studio: deve avere
+   RPM/RPD **diversi da 0** sul free tier. L'app verifica solo che il nome esista,
+   NON la quota (un modello a 0/0/0 "esiste" lo stesso e bloccherebbe tutti).
+   Preferisci un flash-lite (RPD 500); gli altri flash hanno RPD 20.
+2. Modifica `modelli.json` nella radice del repo: `model`, `rpm`, `rpd` del ruolo
+   (`asr` = trascrizione, `fallback` = trascrittore di riserva, `text` = pulizia e
+   traduzione), e pubblicalo su `main`. Le app lo leggono all'avvio e a ogni coda.
+3. Aggiorna anche `trascrittore/config.py` con gli stessi valori: il test offline
+   *"modelli.json == config.py"* fallisce finché non coincidono (così una release
+   futura non riporta indietro il modello).
+
+⚠️ Pubblicare su `main` aggiorna subito anche **Colab** (si installa da `main`):
+se su `main` ci sono commit non ancora rilasciati, arrivano anche quelli.

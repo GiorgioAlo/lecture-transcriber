@@ -20,7 +20,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from . import audio, percorsi
-from .errors import DownloadFallito, Interrotto
+from .errors import DownloadFallito, Interrotto, Messaggio
 from .progress import Reporter
 
 # App "windowed" (senza console, come nel .exe): su Windows ogni subprocess verso
@@ -190,7 +190,8 @@ def scarica(
     Se un file 'scaricato.*' esiste gia', lo riusa (ripresa). `avanzamento(fr)`
     riceve 0..1 man mano che il download procede."""
     if not _url_valido(url):
-        raise DownloadFallito("Link non valido: inserisci un indirizzo che inizia con http:// o https://.")
+        raise DownloadFallito(Messaggio(
+            "Link non valido: inserisci un indirizzo che inizia con http:// o https://.", "py.dl.badurl"))
     work_dir.mkdir(parents=True, exist_ok=True)
     esistenti = _scaricati_completi(work_dir)
     if esistenti:
@@ -281,14 +282,15 @@ def _esegui_download(
     if proc.returncode != 0 or not files:
         testo = "\n".join(coda_errori).lower()
         if e_webex(url):
-            msg = ("Non riesco a scaricare da Webex. I cookie potrebbero essere scaduti "
-                   "(riesportali) o il video è protetto da password.")
+            msg = Messaggio("Non riesco a scaricare da Webex. I cookie potrebbero essere scaduti "
+                            "(riesportali) o il video è protetto da password.", "py.dl.webex")
         elif "sign in" in testo or "login" in testo or "private" in testo:
-            msg = "Il video è privato o richiede l'accesso: non posso scaricarlo."
+            msg = Messaggio("Il video è privato o richiede l'accesso: non posso scaricarlo.", "py.dl.private")
         elif "unsupported url" in testo or "no video" in testo:
-            msg = "Questo link non è supportato per il download."
+            msg = Messaggio("Questo link non è supportato per il download.", "py.dl.unsupported")
         else:
-            msg = "Non sono riuscito a scaricare l'audio dal link (controlla il link e la connessione)."
+            msg = Messaggio("Non sono riuscito a scaricare l'audio dal link (controlla il link e la "
+                            "connessione).", "py.dl.generic")
         raise DownloadFallito(msg)
 
     avanzamento(1.0)
@@ -303,17 +305,19 @@ def valida_cookies(path: str) -> tuple[bool, str]:
     try:
         testo = Path(path).read_text(encoding="utf-8", errors="replace")
     except Exception:
-        return False, "Non riesco a leggere il file."
+        return False, Messaggio("Non riesco a leggere il file.", "py.cookie.unreadable")
     # Righe-cookie vere = quelle con >=7 campi separati da TAB (incluse le
     # '#HttpOnly_...', che hanno i tab; i commenti normali non hanno tab).
     righe_cookie = [r.split("\t") for r in testo.splitlines()
                     if "\t" in r and len(r.split("\t")) >= 7]
     formato_ok = ("# Netscape HTTP Cookie File" in testo) or bool(righe_cookie)
     if not formato_ok:
-        return False, "Questo non è un file di cookie valido (serve il formato Netscape, non un .txt qualsiasi)."
+        return False, Messaggio("Questo non è un file di cookie valido (serve il formato Netscape, "
+                                "non un .txt qualsiasi).", "py.cookie.format")
     # 'webex.com' deve stare nel CAMPO DOMINIO (il primo) di una riga-cookie,
     # non comparire da qualche parte nel testo (cosi un file a caso non passa).
     ha_webex = any("webex.com" in cols[0].lower() for cols in righe_cookie)
     if not ha_webex:
-        return False, "Nel file non ci sono cookie di Webex: esportali mentre sei dentro Webex (sulla pagina della registrazione)."
+        return False, Messaggio("Nel file non ci sono cookie di Webex: esportali mentre sei dentro "
+                                "Webex (sulla pagina della registrazione).", "py.cookie.nowebex")
     return True, ""

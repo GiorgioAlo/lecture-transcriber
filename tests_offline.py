@@ -440,7 +440,8 @@ class _PfFinto:
     def completata(self, k): pass
     def stop(self): pass
 _old = (_coda.Prefetcher, _coda.crea_client, _coda.pipeline.fase_trascrizione,
-        _coda.cartella_lavoro, _coda.identita_job)
+        _coda.cartella_lavoro, _coda.identita_job, _coda.modelli.prepara)
+_coda.modelli.prepara = lambda *a, **k: None          # niente rete nei test
 _tmp = Path(tempfile.mkdtemp())
 _partite = []
 def _fase_finta(job, *a, **k):
@@ -461,10 +462,189 @@ try:
                       al_termine=lambda key, ris, err: _esiti.append((key, type(err).__name__)))
 finally:
     (_coda.Prefetcher, _coda.crea_client, _coda.pipeline.fase_trascrizione,
-     _coda.cartella_lavoro, _coda.identita_job) = _old
+     _coda.cartella_lavoro, _coda.identita_job, _coda.modelli.prepara) = _old
 check("coda: si ferma alla prima lezione", _partite == [_jobs[0]])
 check("coda: la scheda riceve ModelloNonDisponibile", _esiti == [("k1", "ModelloNonDisponibile")])
+
+# "no longer available to new users": models.get dice che ESISTE, ma la frase basta
+class _CliChiuso(_CliModelli):
+    def __init__(self):
+        super().__init__(esiste=True)
+        cli = self
+        class models:
+            @staticmethod
+            def generate_content(**kw):
+                cli.n_gen += 1
+                raise _gerr.ClientError(404, {"error": {"code": 404, "status": "NOT_FOUND", "message":
+                    "This model models/gemini-vecchio is no longer available to new users. Please update "
+                    "your code to use models/gemini-nuovo-preview for the latest features."}})
+            get = staticmethod(lambda model: {"name": model})
+        self.models = models
+_c = _CliChiuso()
+_e = _prova(_c)
+check("'no longer available' -> ModelloNonDisponibile anche se models.get dice che esiste",
+      isinstance(_e, ModelloNonDisponibile) and _c.n_gen == 1)
+check("'no longer available' -> sostituto suggerito da Google letto dal messaggio",
+      getattr(_e, "suggerito", None) == "gemini-nuovo-preview")
 _gem._attendi_annullabile = _old_attesa
+
+print("\n#  punto 8 B: modelli.json (GitHub -> cache -> config.py)")
+import json as _json
+from trascrittore import modelli as _mod
+_REPO_FILE = Path(__file__).resolve().parent / "modelli.json"
+_ufficiale = _json.loads(_REPO_FILE.read_text(encoding="utf-8"))
+_v = _mod.valida(_ufficiale)
+check("modelli.json del repo: tutti e 3 i ruoli validi", set(_v) == {"asr", "fallback", "text"})
+check("modelli.json == config.py: nomi dei modelli",
+      (_v["asr"]["model"], _v["fallback"]["model"], _v["text"]["model"])
+      == (config.ASR_MODEL, config.TRANSCRIBE_MODEL, config.TEXT_MODEL))
+check("modelli.json == config.py: rpd asr = RPD_TRASCRIZIONE", _v["asr"]["rpd"] == config.RPD_TRASCRIZIONE)
+check("modelli.json == config.py: rpm -> stessi worker (12 audio, 4 testo)",
+      _mod.worker_asr(_v["asr"]["rpm"]) == config.ASR_WORKER
+      and _mod.worker_testo(_v["text"]["rpm"]) == config.WORKER_PARALLELI)
+
+_snap = (config.ASR_MODEL, config.TRANSCRIBE_MODEL, config.TEXT_MODEL, config.RPD_TRASCRIZIONE,
+         config.ASR_WORKER, config.WORKER_PARALLELI)
+def _stato():
+    return (config.ASR_MODEL, config.TRANSCRIBE_MODEL, config.TEXT_MODEL, config.RPD_TRASCRIZIONE,
+            config.ASR_WORKER, config.WORKER_PARALLELI)
+
+_mod.applica(_v)
+check("applicare il file ufficiale non cambia niente", _stato() == _snap)
+
+check("valida: nome non gemini- scartato", "asr" not in _mod.valida({"asr": {"model": "gpt-4"}}))
+check("valida: maiuscole/spazi scartati", "asr" not in _mod.valida({"asr": {"model": "gemini-3 Flash"}}))
+check("valida: file non-dizionario -> niente", _mod.valida(["x"]) == {} and _mod.valida(None) == {})
+check("valida: rpm strano ignorato, nome tenuto",
+      _mod.valida({"text": {"model": "gemini-x", "rpm": "15"}}) == {"text": {"model": "gemini-x"}})
+
+class _CliGet:
+    def __init__(self, esistenti):
+        es = set(esistenti)
+        class models:
+            @staticmethod
+            def get(model):
+                if model not in es:
+                    raise RuntimeError("404")
+                return {"name": model}
+        self.models = models
+
+_nuovo = {"asr": {"model": "gemini-nuovo-flash", "rpm": 5, "rpd": 20},
+          "text": {"model": "gemini-nuovo-lite", "rpm": 5, "rpd": 20}}
+_mod.applica(_mod.valida(_nuovo), _CliGet({"gemini-nuovo-flash", "gemini-nuovo-lite"}))
+check("nome nuovo confermato da Google -> usato", config.ASR_MODEL == "gemini-nuovo-flash"
+      and config.TEXT_MODEL == "gemini-nuovo-lite")
+check("limiti del modello nuovo: rpd 20, worker 2 audio / 1 testo",
+      (config.RPD_TRASCRIZIONE, config.ASR_WORKER, config.WORKER_PARALLELI) == (20, 2, 1))
+check("ruolo assente nel file -> resta quello di config.py", config.TRANSCRIBE_MODEL == _snap[1])
+
+_mod.applica(_mod.valida(_nuovo), _CliGet({"gemini-nuovo-lite"}))
+check("nome che Google non conosce (refuso) -> resta il vecchio, con i suoi limiti",
+      config.ASR_MODEL == _snap[0] and config.RPD_TRASCRIZIONE == _snap[3] and config.ASR_WORKER == _snap[4])
+check("...e l'altro ruolo, valido, si applica lo stesso", config.TEXT_MODEL == "gemini-nuovo-lite")
+_mod.ripristina()
+check("ripristina -> valori di config.py", _stato() == _snap)
+
+# ordine delle fonti: GitHub -> cache -> config.py (rete e cache finte)
+_old_net = (_mod._scarica, _mod._leggi_cache, _mod._scrivi_cache)
+_scritta = {}
+def _rete_giu():
+    raise OSError("niente rete")
+_mod._scrivi_cache = lambda d: _scritta.update(d)
+try:
+    _mod._scarica = lambda: _nuovo
+    _mod._leggi_cache = lambda: None
+    _mod.prepara(_CliGet({"gemini-nuovo-flash", "gemini-nuovo-lite"}), forza=True)
+    check("GitHub risponde -> si usa e si salva in cache",
+          config.ASR_MODEL == "gemini-nuovo-flash" and _scritta.get("asr", {}).get("model") == "gemini-nuovo-flash")
+    _mod._scarica = _rete_giu
+    _mod._leggi_cache = lambda: {"text": {"model": "gemini-dalla-cache", "rpm": 15}}
+    _mod.prepara(_CliGet({"gemini-dalla-cache"}), forza=True)
+    check("niente rete -> ultima copia buona in cache",
+          config.TEXT_MODEL == "gemini-dalla-cache" and config.ASR_MODEL == _snap[0])
+    _mod._scarica = lambda: {"asr": "rotto"}
+    _mod._leggi_cache = lambda: None
+    _mod.prepara(None, forza=True)
+    check("file rotto e niente cache -> config.py", _stato() == _snap)
+    _mod.prepara(None)
+    check("una volta per processo: seconda prepara() non rilegge", _stato() == _snap)
+finally:
+    _mod._scarica, _mod._leggi_cache, _mod._scrivi_cache = _old_net
+    _mod.ripristina()
+    _mod.invalida()
+
+print("\n#  punto 8 B.5: modello che rifiuta thinking_config -> si riprova senza")
+class _CliThinking:
+    """Rifiuta thinking_config come gemini-2.5-flash-lite (misurato)."""
+    def __init__(self):
+        self.chiamate = []
+        cli = self
+        class models:
+            @staticmethod
+            def generate_content(model, contents, config):
+                cli.chiamate.append(config.thinking_config is not None)
+                if config.thinking_config is not None:
+                    raise _gerr.ClientError(400, {"error": {"code": 400, "status": "INVALID_ARGUMENT",
+                        "message": "The thinking budget 128 is invalid. Please choose a value between 512 and 24576."}})
+                return _RispostaOk()
+        self.models = models
+class _RispostaOk:
+    candidates = [type("C", (), {"finish_reason": "STOP"})()]
+_old_estrai = transcribe._estrai_transcript
+transcribe._estrai_transcript = lambda r: "testo trascritto"
+try:
+    _ct = _CliThinking()
+    _cfg = {"thinking_config": transcribe.types.ThinkingConfig(thinking_budget=128)}
+    transcribe._SENZA_THINKING.discard("gemini-prova")
+    _t1 = transcribe._genera(_ct, "gemini-prova", None, _cfg, _RepTx(), "test")
+    check("rifiuto thinking -> riprova subito senza e riesce", _t1[0] == "testo trascritto"
+          and _ct.chiamate == [True, False])
+    _ct.chiamate.clear()
+    transcribe._genera(_ct, "gemini-prova", None, _cfg, _RepTx(), "test")
+    check("la volta dopo non lo manda proprio (una chiamata sola)", _ct.chiamate == [False])
+    check("il dizionario di configurazione del chiamante resta intatto", "thinking_config" in _cfg)
+finally:
+    transcribe._estrai_transcript = _old_estrai
+    transcribe._SENZA_THINKING.discard("gemini-prova")
+
+print("\n#  punto 6: frasi per l'utente come codici traducibili (Messaggio)")
+from trascrittore.errors import Messaggio, DownloadFallito, Interrotto as _Interrotto
+_mm = Messaggio("Ciao {nome}", "py.prova", nome="x")
+check("Messaggio e' una stringa normale (CLI/log invariati)", _mm == "Ciao {nome}" and isinstance(_mm, str))
+check("Messaggio porta codice e valori", _mm.codice == "py.prova" and _mm.valori == {"nome": "x"})
+_df = DownloadFallito(Messaggio("Il video è privato", "py.dl.private"))
+check("l'errore ricorda il codice della sua frase", _df.codice == "py.dl.private" and str(_df) == "Il video è privato")
+check("errore con frase semplice -> nessun codice", DownloadFallito("testo").codice is None)
+check("errore senza argomenti (Interrotto) -> nessun codice", _Interrotto().codice is None)
+_mb = transcribe._messaggio_blocco("RECITATION")
+check("blocco copyright -> codice + motivo", _mb.codice == "py.blocked.copyright" and _mb.valori == {"motivo": "RECITATION"})
+check("blocco: frase italiana invariata", "copyright" in _mb and "RECITATION" in _mb)
+check("cookie non validi -> codice", download.valida_cookies(str(non_cookie))[1].codice == "py.cookie.format")
+_mnd = ModelloNonDisponibile("gemini-x")
+check("ModelloNonDisponibile -> codice + modello", _mnd.codice == "py.err.model.d" and _mnd.valori == {"modello": "gemini-x"})
+
+# Ogni codice usato nel codice Python ha la traduzione IT ed EN nella pagina
+_html = (Path(__file__).resolve().parent / "ui" / "index.html").read_text(encoding="utf-8")
+_it = _html[_html.index("  it: {"):_html.index("  en: {")]
+_en = _html[_html.index("  en: {"):_html.index("\n};", _html.index("  en: {"))]
+_k_it = set(re.findall(r"'(py\.[\w.]+)'\s*:", _it))
+_k_en = set(re.findall(r"'(py\.[\w.]+)'\s*:", _en))
+_usati = set()
+for _p in [Path(__file__).resolve().parent / "app.py", *(Path(__file__).resolve().parent / "trascrittore").glob("*.py")]:
+    _usati |= set(re.findall(r'"(py\.[\w.]+[\w])"', _p.read_text(encoding="utf-8")))
+_usati.discard("py.badfile")
+_usati |= {f"py.badfile{q}.{x}" for q in ("1", "N") for x in ("t", "d")}   # composti in app.py
+print("\n#  punto 9: versione da una fonte sola (config.VERSION)")
+import tomllib as _toml
+_pp = _toml.loads((Path(__file__).resolve().parent / "pyproject.toml").read_text(encoding="utf-8"))
+check("pyproject: niente versione scritta a mano", "version" not in _pp["project"])
+check("pyproject: versione dinamica letta da trascrittore.config.VERSION",
+      "version" in _pp["project"].get("dynamic", [])
+      and _pp["tool"]["setuptools"]["dynamic"]["version"] == {"attr": "trascrittore.config.VERSION"})
+check("config.VERSION e' semver X.Y.Z", re.fullmatch(r"\d+\.\d+\.\d+", config.VERSION) is not None)
+
+check("IT ed EN hanno le stesse chiavi py.*", _k_it == _k_en)
+check("ogni codice usato in Python ha la sua traduzione", not (_usati - _k_it))
 
 print(f"\n==== RISULTATO: {ok} PASS, {ko} FAIL ====")
 raise SystemExit(1 if ko else 0)

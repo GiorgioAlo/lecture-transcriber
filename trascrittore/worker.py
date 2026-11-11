@@ -84,8 +84,10 @@ def esegui_in_processo(q, jobs, keys, chiave, work_base, rifai=False, cancel_eve
             }))
         else:
             # Mando il TIPO dell'errore (nome classe) cosi il padre sceglie il
-            # messaggio giusto senza dover spedire l'oggetto eccezione.
-            q.put(("errore", key, type(err).__name__ if err else "Exception", str(err)[:200]))
+            # messaggio giusto senza dover spedire l'oggetto eccezione; piu' il
+            # codice/valori per tradurlo nella lingua dell'interfaccia (se c'e').
+            q.put(("errore", key, type(err).__name__ if err else "Exception", str(err)[:200],
+                   getattr(err, "codice", None), dict(getattr(err, "valori", None) or {})))
 
     interrotto = False
     try:

@@ -31,7 +31,7 @@ from pathlib import Path
 from google.genai import types
 
 from . import audio, config, util
-from .errors import ContenutoBloccato, Interrotto
+from .errors import ContenutoBloccato, Interrotto, Messaggio
 from .gemini import IMPOSTAZIONI_SICUREZZA, con_retry
 from .progress import Reporter
 
@@ -112,20 +112,24 @@ def _carica_file(client, path: Path, reporter: Reporter):
 # controllo come il copyright (RECITATION) o una blocklist del modello.
 _FINISH_BLOCCO = {"SAFETY", "RECITATION", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII"}
 
-def _messaggio_blocco(motivo: str) -> str:
+def _messaggio_blocco(motivo: str) -> Messaggio:
     """Messaggio utente a seconda del PERCHE' Gemini ha rifiutato. Il motivo tecnico
     e' sempre incluso in coda: ci dice se e' qualcosa che possiamo toccare (safety,
     ora gia' a BLOCK_NONE) o no (copyright/proibito, non disattivabili sull'API)."""
     m = (motivo or "").upper()
     if m == "RECITATION":
+        codice = "py.blocked.copyright"
         testa = ("Gemini riconosce nell'audio materiale protetto da copyright "
                  "(musica o clip di un programma) e non lo trascrive.")
     elif m in ("SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII"):
+        codice = "py.blocked.unsuitable"
         testa = ("Gemini considera questo audio non adatto e si rifiuta di trascriverlo.")
     else:
+        codice = "py.blocked.generic"
         testa = "Gemini si e' rifiutato di elaborare questo audio."
-    return (f"{testa} (motivo tecnico: {motivo}). "
-            "Capita con i video di intrattenimento; con le lezioni normali non succede.")
+    return Messaggio(f"{testa} (motivo tecnico: {motivo}). "
+                     "Capita con i video di intrattenimento; con le lezioni normali non succede.",
+                     codice, motivo=motivo)
 
 
 def _motivo_blocco(risposta) -> str | None:
@@ -233,18 +237,50 @@ def _diagnosi(testo: str, finish: str, durata_sec: float) -> str:
     return "OK"
 
 
+# Modelli che hanno RIFIUTATO thinking_config in questa sessione (vedi _rifiuta_thinking):
+# dopo il primo rifiuto non glielo si manda piu'.
+_SENZA_THINKING: set[str] = set()
+
+
+def _rifiuta_thinking(e: Exception) -> bool:
+    """400 INVALID_ARGUMENT sull'impostazione di ragionamento. Misurato il 2026-11-10:
+    'Thinking is not enabled for this model' (gemini-3.5-transcribe) e 'The thinking
+    budget 128 is invalid. Please choose a value between 512 and 24576'
+    (gemini-2.5-flash-lite). In entrambi i casi senza thinking_config il modello
+    risponde: serve se modelli.json passa a un modello che non lo accetta."""
+    if getattr(e, "code", None) != 400:
+        return False
+    return "thinking" in f"{getattr(e, 'message', '') or ''} {e}".lower()
+
+
 def _genera(client, model: str, file_obj, extra: dict, reporter: Reporter, descr: str):
     """Una chiamata a `model` sul file audio, con con_retry (429/503 → attesa del
     retryDelay dell'API, annullabile). Ritorna (testo, finish_reason)."""
-    def azione():
-        risposta = client.models.generate_content(
+    def chiama(opzioni: dict):
+        return client.models.generate_content(
             model=model,
             contents=[file_obj, PROMPT_TRASCRIZIONE],
             config=types.GenerateContentConfig(
                 temperature=config.TEMP_TRASCRIZIONE,
                 safety_settings=IMPOSTAZIONI_SICUREZZA,
-                **extra),
+                **opzioni),
         )
+
+    def azione():
+        opzioni = dict(extra)
+        if model in _SENZA_THINKING:
+            opzioni.pop("thinking_config", None)
+        try:
+            risposta = chiama(opzioni)
+        except Exception as e:
+            if "thinking_config" not in opzioni or not _rifiuta_thinking(e):
+                raise
+            if model not in _SENZA_THINKING:
+                _SENZA_THINKING.add(model)
+                reporter.log(f"ℹ️  [{descr}] {model} non accetta l'impostazione di ragionamento: "
+                             "proseguo senza")
+            opzioni.pop("thinking_config")
+            risposta = chiama(opzioni)
         testo = _estrai_transcript(risposta)
         if not testo:
             # Niente testo: o Gemini ha RIFIUTATO (safety/copyright) -> errore chiaro

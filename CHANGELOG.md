@@ -5,10 +5,15 @@
   Anche da riga di comando (`--formats docx txt md`) e su Colab (campo FORMATS).
 - Al primo avvio l'app parte nella lingua del computer (italiano, altrimenti inglese) e la schermata
   di benvenuto ha il suo selettore IT|EN.
+- Con l'interfaccia in inglese anche avvisi, messaggi di errore e finestre per scegliere i file sono in
+  inglese, e cambiano lingua insieme all'interfaccia.
 - Le parti che Gemini non è riuscito a ripulire o tradurre sono segnalate da un riquadro ben visibile
   (con la fine della parte grezza indicata), nella lingua del documento.
 - Se Google ritira uno dei modelli Gemini usati dall'app, l'app se ne accorge subito, si ferma con un
   messaggio chiaro (invece di riprovare a vuoto) e il lavoro già fatto resta salvato.
+- I modelli da usare possono essere cambiati a distanza (file `modelli.json` nel repo): se Google ne
+  ritira uno, l'app passa al sostituto senza bisogno di una nuova versione.
+- La versione da riga di comando si installa anche con Python 3.11 (prima serviva il 3.12).
 
 ## 1.2.1
 - Risolto un problema per cui l'avviso di nuova versione poteva non comparire.

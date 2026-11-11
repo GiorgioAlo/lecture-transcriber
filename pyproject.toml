@@ -4,10 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lecture-transcriber"
-version = "1.1.0"
+# The version lives in ONE place: trascrittore/config.py (VERSION), also used by the
+# app's update check and the macOS/Windows builds.
+dynamic = ["version"]
 description = "Turn lecture audio/video or links (YouTube/Webex) into cleaned, translated Word documents using Google Gemini."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "GiorgioAlo" }]
 keywords = ["transcription", "lectures", "gemini", "whisper", "yt-dlp"]
@@ -31,3 +33,6 @@ transcribe = "trascrittore.cli:main"
 [tool.setuptools]
 # Ship only the engine package; app.py and ui/ belong to the desktop app.
 packages = ["trascrittore"]
+
+[tool.setuptools.dynamic]
+version = { attr = "trascrittore.config.VERSION" }

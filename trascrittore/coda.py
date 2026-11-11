@@ -22,7 +22,7 @@ from __future__ import annotations
 import threading
 from pathlib import Path
 
-from . import config, pipeline, transcribe
+from . import config, modelli, pipeline, transcribe
 from .errors import Interrotto, LimiteGiornaliero, ModelloNonDisponibile
 from .gemini import crea_client
 from .pipeline import cartella_lavoro, identita_job
@@ -179,6 +179,11 @@ def esegui_coda(jobs, keys, chiave, reporter_per_lezione, work_base,
         client2 = crea_client(chiave, config.TIMEOUT_TESTO_S)
     except Exception:
         client2 = None
+    # Quali modelli usare (modelli.json). L'app grafica fa girare ogni coda in un
+    # processo nuovo, quindi la rilegge a ogni avvio, «Riprova» compreso. Gli
+    # eventuali avvisi finiscono nel log della prima lezione.
+    if keys:
+        modelli.prepara(client1, reporter_per_lezione(keys[0]).log)
 
     interrotto = False
     for k, job in enumerate(jobs):

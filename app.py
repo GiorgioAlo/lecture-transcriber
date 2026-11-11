@@ -26,11 +26,12 @@ from pathlib import Path
 
 import webview
 
-from trascrittore import Job, aggiornamenti, config, documents, percorsi, preferenze, worker
+from trascrittore import (Job, aggiornamenti, config, documents, gemini, modelli, percorsi,
+                          preferenze, worker)
 from trascrittore import chiave as apikey
 from trascrittore import download as dl
 from trascrittore.audio import durata
-from trascrittore.errors import DownloadFallito
+from trascrittore.errors import DownloadFallito, Messaggio
 from trascrittore.pipeline import Risultato
 from trascrittore.progress import Reporter
 
@@ -53,12 +54,31 @@ except AttributeError:
     _DIALOG_SAVE = webview.SAVE_DIALOG
     _DIALOG_FOLDER = webview.FOLDER_DIALOG
 
-# Filtro della finestra "Salva con nome" secondo il formato del documento.
-_TIPI_FILE = {
-    ".docx": "Documento Word (*.docx)",
-    ".txt": "Testo semplice (*.txt)",
-    ".md": "Markdown (*.md)",
+# Etichette dei filtri nelle finestre di SISTEMA (apri/salva): sono le uniche
+# frasi che Python mostra da solo, quindi qui serve la lingua dell'interfaccia
+# (la pagina la comunica con `imposta_lingua`). Tutto il resto lo traduce la pagina.
+_ETICHETTE_DIALOGO = {
+    "it": {"media": "Audio e video", "tutti": "Tutti i file", "cookie": "File di cookie",
+           ".docx": "Documento Word", ".txt": "Testo semplice", ".md": "Markdown", "doc": "Documento"},
+    "en": {"media": "Audio and video", "tutti": "All files", "cookie": "Cookie files",
+           ".docx": "Word document", ".txt": "Plain text", ".md": "Markdown", "doc": "Document"},
 }
+
+
+def _m(codice, **valori):
+    """Frase per la pagina come CODICE + valori: la traduce lei (chiavi `py.*`
+    del dizionario I18N in ui/index.html), anche al cambio di lingua."""
+    return {"k": codice, "v": valori}
+
+
+def _m_da(x):
+    """Da un testo del pacchetto a qualcosa che la pagina sa mostrare: se e' un
+    `Messaggio` (ha il codice) diventa traducibile, altrimenti resta com'e'
+    (es. un errore tecnico imprevisto)."""
+    codice = getattr(x, "codice", None)
+    if codice:
+        return _m(codice, **(getattr(x, "valori", None) or {}))
+    return "" if x is None else str(x)
 
 
 class ReporterWeb(Reporter):
@@ -104,9 +124,24 @@ class Api:
         self._cookies_webex = None    # file cookies.txt per Webex, tenuto SOLO in RAM (sessione sensibile)
         self._proc = None             # processo figlio che trascrive (lo si puo' uccidere per annullare)
         self._cancel_events = {}      # key lezione -> Event condiviso col figlio (annullo MIRATO cooperativo)
+        self._lingua_ui = "it"        # lingua dell'interfaccia (la manda la pagina): serve ai dialoghi di sistema
 
     def _collega_finestra(self, window):
         self._window = window
+
+    def imposta_lingua(self, lingua):
+        """La pagina comunica la lingua dell'interfaccia (all'avvio e a ogni cambio)."""
+        if lingua in _ETICHETTE_DIALOGO:
+            self._lingua_ui = lingua
+        return {"ok": True}
+
+    def _etichetta(self, chiave):
+        return _ETICHETTE_DIALOGO.get(self._lingua_ui, _ETICHETTE_DIALOGO["it"])[chiave]
+
+    def _toast(self, tipo, titolo, testo):
+        """Avviso a comparsa: titolo/testo sono codici `_m(...)` (o testo grezzo)."""
+        self._js("toast(" + json.dumps(tipo) + "," + json.dumps(titolo, ensure_ascii=False) + ","
+                 + json.dumps(testo, ensure_ascii=False) + ")")
 
     def _prendi_dialogo(self) -> bool:
         """Prenota l'apertura di UN dialogo file. Ritorna False se ce n'e' gia
@@ -147,8 +182,8 @@ class Api:
             if self._window is None:
                 return
             tipi = (
-                "Audio e video (*.mp4;*.m4a;*.mp3;*.wav;*.aac;*.ogg;*.flac;*.mkv;*.mov;*.webm)",
-                "Tutti i file (*.*)",
+                self._etichetta("media") + " (*.mp4;*.m4a;*.mp3;*.wav;*.aac;*.ogg;*.flac;*.mkv;*.mov;*.webm)",
+                self._etichetta("tutti") + " (*.*)",
             )
             try:
                 scelti = self._su_thread_gui(lambda: self._window.create_file_dialog(
@@ -160,11 +195,8 @@ class Api:
             self._js("appFileScelti(" + json.dumps(risultato, ensure_ascii=False) + ")")
             if scartati:
                 nomi = ", ".join(scartati)
-                titolo = "File non valido" if len(scartati) == 1 else "File non validi"
-                msg = f"Questo non è un file audio o video, l'ho saltato: {nomi}" if len(scartati) == 1 \
-                    else f"Questi non sono file audio o video, li ho saltati: {nomi}"
-                self._js("toast('warn', " + json.dumps(titolo, ensure_ascii=False)
-                         + ", " + json.dumps(msg, ensure_ascii=False) + ")")
+                quanti = "1" if len(scartati) == 1 else "N"
+                self._toast("warn", _m("py.badfile" + quanti + ".t"), _m("py.badfile" + quanti + ".d", nomi=nomi))
         finally:
             self._dialogo_in_corso = False
 
@@ -185,9 +217,9 @@ class Api:
                 continue
             try:
                 minuti = durata(path) / 60
-                sub = f"File · {minuti:.0f} min" if minuti >= 1 else "File"
+                sub = _m("py.sub.filemin", m=f"{minuti:.0f}") if minuti >= 1 else _m("py.sub.file")
             except Exception:
-                sub = "File"
+                sub = _m("py.sub.file")
             risultato.append({"nome": path.name, "path": str(path), "sub": sub})
         return risultato, scartati
 
@@ -225,7 +257,7 @@ class Api:
         try:
             if self._window is None:
                 return
-            tipi = ("File di cookie (*.txt)", "Tutti i file (*.*)")
+            tipi = (self._etichetta("cookie") + " (*.txt)", self._etichetta("tutti") + " (*.*)")
             try:
                 scelti = self._su_thread_gui(lambda: self._window.create_file_dialog(
                     _DIALOG_OPEN, allow_multiple=False, file_types=tipi))
@@ -240,7 +272,8 @@ class Api:
                 self._cookies_webex = str(path)   # solo in RAM, non lo copiamo/salviamo
                 self._js("appCookies(" + json.dumps({"ok": True, "nome": Path(path).name}) + ")")
             else:
-                self._js("appCookies(" + json.dumps({"ok": False, "errore": errore}) + ")")
+                self._js("appCookies(" + json.dumps({"ok": False, "errore": _m_da(errore)},
+                                                    ensure_ascii=False) + ")")
         finally:
             self._dialogo_in_corso = False
 
@@ -308,15 +341,13 @@ class Api:
 
         if dove:
             if ripiego:
-                self._js("toast('warn'," + json.dumps("Documenti spostati o cancellati") + "," +
-                         json.dumps("Nella cartella salvata non ci sono più: apro la copia interna dell'app.") + ")")
+                self._toast("warn", _m("py.docsmoved.t"), _m("py.docsmoved.d"))
             try:
                 percorsi.apri_cartella(dove)   # Esplora / Finder / file manager Linux
             except Exception:
                 traceback.print_exc()
         else:
-            self._js("toast('err'," + json.dumps("Non trovo i documenti") + "," +
-                     json.dumps("I documenti di questa lezione non ci sono più nemmeno nella cache. Rifai la trascrizione.") + ")")
+            self._toast("err", _m("py.docsgone.t"), _m("py.docsgone.d"))
         return {"ok": True}
 
     def salva(self, path):
@@ -340,10 +371,12 @@ class Api:
             if not docs:
                 return
             if len(docs) == 1:
-                tipo = _TIPI_FILE.get(docs[0].suffix.lower(), f"Documento (*{docs[0].suffix})")
+                est = docs[0].suffix.lower()
+                etichette = _ETICHETTE_DIALOGO.get(self._lingua_ui, _ETICHETTE_DIALOGO["it"])
+                tipo = f"{etichette.get(est, etichette['doc'])} (*{est})"
                 scelto = self._su_thread_gui(lambda: self._window.create_file_dialog(
                     _DIALOG_SAVE, save_filename=docs[0].name,
-                    file_types=(tipo, "Tutti i file (*.*)")))
+                    file_types=(tipo, self._etichetta("tutti") + " (*.*)")))
                 destino = scelto[0] if isinstance(scelto, (list, tuple)) else scelto
                 if not destino:
                     return
@@ -353,8 +386,7 @@ class Api:
                 # Il selettore cartella di Windows non ha un messaggio proprio:
                 # lo spieghiamo con un avviso PRIMA di aprirlo.
                 nomi = ", ".join(d.name for d in docs)
-                self._js("toast('info'," + json.dumps("Scegli la cartella") + "," +
-                         json.dumps(f"Ci salvo i {len(docs)} documenti: {nomi}") + ")")
+                self._toast("info", _m("py.pickfolder.t"), _m("py.pickfolder.d", n=len(docs), nomi=nomi))
                 scelto = self._su_thread_gui(
                     lambda: self._window.create_file_dialog(_DIALOG_FOLDER))
                 cartella = scelto[0] if isinstance(scelto, (list, tuple)) else scelto
@@ -372,8 +404,7 @@ class Api:
         except Exception:
             traceback.print_exc()
             # il salvataggio e fallito ma la lezione resta "fatta": solo un avviso
-            self._js("toast('err'," + json.dumps("Salvataggio non riuscito") + "," +
-                     json.dumps("Non sono riuscito a copiare i documenti nella posizione scelta.") + ")")
+            self._toast("err", _m("py.savefail.t"), _m("py.savefail.d"))
         finally:
             self._dialogo_in_corso = False
 
@@ -458,13 +489,12 @@ class Api:
         valore = (valore or "").strip()
         ok, errore = apikey.valida(valore)
         if not ok:
-            return {"ok": False, "errore": errore}
+            return {"ok": False, "errore": _m_da(errore)}
         try:
             apikey.salva(valore)
         except Exception:
             traceback.print_exc()
-            return {"ok": False,
-                    "errore": "Non riesco a salvare la chiave nel Gestore Credenziali di Windows."}
+            return {"ok": False, "errore": _m("py.key.nosave")}
         return {"ok": True, "preview": apikey.anteprima(valore)}
 
     def elimina_chiave(self):
@@ -519,11 +549,9 @@ class Api:
             except Exception:
                 traceback.print_exc()
             if esito:
-                self._js("toast('ok','yt-dlp aggiornato',"
-                         "'Il motore di download è alla versione più recente.')")
+                self._toast("ok", _m("py.ytdlp.ok.t"), _m("py.ytdlp.ok.d"))
             else:
-                self._js("toast('warn','yt-dlp non aggiornato',"
-                         "'Non è stato possibile aggiornare ora. Riprova più tardi.')")
+                self._toast("warn", _m("py.ytdlp.ko.t"), _m("py.ytdlp.ko.d"))
         threading.Thread(target=_lavora, daemon=True).start()
         return {"ok": True}
 
@@ -598,7 +626,7 @@ class Api:
             voci.append({
                 "nome": nome, "path": chiave, "documenti": n_doc,
                 "lingue": ", ".join(x.upper() for x in lingue),
-                "sub": "Completata · " + (f"{n_doc} documento" if n_doc == 1 else f"{n_doc} documenti"),
+                "sub": _m("py.sub.done1") if n_doc == 1 else _m("py.sub.doneN", n=n_doc),
                 "cartella": cartella_salvata, "src": src,
             })
         return voci
@@ -665,15 +693,13 @@ class Api:
                          json.dumps({"n": len(salvati), "cartella": str(cartella)}) + ")")
         except Exception:
             traceback.print_exc()
-            self._js("toast('err'," + json.dumps("Salvataggio non riuscito") + "," +
-                     json.dumps("Non sono riuscito a copiare i documenti nella cartella scelta; usa Salva...") + ")")
+            self._toast("err", _m("py.savefail.t"), _m("py.savefail.auto"))
 
     def svuota_cache(self):
         """Svuota la cache di TUTTE le lezioni (cancella il contenuto di cache/)."""
         # Mai durante un batch: cancellerebbe le cartelle delle lezioni in corso.
         if self._in_corso:
-            self._js("toast(" + json.dumps("warn") + "," + json.dumps("Sto lavorando") + "," +
-                     json.dumps("Aspetta che finiscano le trascrizioni prima di svuotare la cache.") + ")")
+            self._toast("warn", _m("py.cachebusy.t"), _m("py.cachebusy.d"))
             return {"ok": False, "motivo": "in_corso"}
         try:
             if OUT_BASE.exists():
@@ -777,7 +803,8 @@ class Api:
         webex = (tipo == "webex") or dl.e_webex(key)
         cookies = self._cookies_webex if webex else None
         if webex and not cookies:
-            raise DownloadFallito("Carica prima il file dei cookie di Webex (riga 'Accesso Webex').")
+            raise DownloadFallito(Messaggio("Carica prima il file dei cookie di Webex (riga 'Accesso Webex').",
+                                            "py.dl.nocookies"))
         nome = (l.get("nome") or key).strip()
         # NIENTE chiamate di rete qui: una `dl.info()` sincrona (fino a decine di secondi su
         # un link lento) bloccherebbe l'avvio del batch PRIMA che parta il processo figlio →
@@ -852,9 +879,7 @@ class Api:
         chiave = apikey.leggi()
         if lezioni and not chiave:
             for l in lezioni:
-                self._js("appErrore(" + json.dumps(l["path"]) + "," +
-                         json.dumps("Manca la chiave") + "," +
-                         json.dumps("Apri le Impostazioni (icona ingranaggio) e inserisci la tua chiave API.") + ")")
+                self._errore_scheda(l["path"], _m("py.err.nokey.t"), _m("py.err.nokey.d"))
             return
 
         # Cartella di destinazione scelta UNA volta (dalla nostra finestra di
@@ -871,13 +896,11 @@ class Api:
                 job = self._costruisci_job(l, lingue, corso, formati)
             except DownloadFallito as e:
                 self._js("appLavoroPartito(" + json.dumps(key) + ")")
-                self._js("appErrore(" + json.dumps(key) + "," +
-                         json.dumps("Download non riuscito") + "," + json.dumps(str(e)) + ")")
+                self._errore_scheda(key, _m("py.err.dl.t"), _m_da(e.args[0] if e.args else str(e)))
                 continue
             except Exception as e:
                 self._js("appLavoroPartito(" + json.dumps(key) + ")")
-                self._js("appErrore(" + json.dumps(key) + "," +
-                         json.dumps("Impossibile aggiungere") + "," + json.dumps(str(e)[:200]) + ")")
+                self._errore_scheda(key, _m("py.err.add.t"), str(e)[:200])
                 continue
             keys.append(key); jobs.append(job)
 
@@ -960,10 +983,9 @@ class Api:
         elif tipo == "fatta":
             self._lezione_fatta(ev[1], ev[2], lingue)
         elif tipo == "errore":
-            self._lezione_errore(ev[1], ev[2], ev[3])
+            self._lezione_errore(*ev[1:])
         elif tipo == "fatale":
-            self._js("toast('err'," + json.dumps("Errore imprevisto") + "," +
-                     json.dumps(ev[1]) + ")")
+            self._toast("err", _m("py.err.fatal.t"), ev[1])
 
     def _lezione_fatta(self, key, light, lingue):
         """Lezione completata nel figlio: ricostruisco il Risultato (i documenti
@@ -986,44 +1008,45 @@ class Api:
             self._autosave(key, ris, self._cartella_batch)
         self._snellisci(ris.work_dir)
 
-    def _lezione_errore(self, key, kind, msg):
+    def _errore_scheda(self, key, titolo, testo):
+        """Mette la scheda in errore: titolo/testo sono codici `_m(...)` (la pagina li
+        traduce e li ritraduce al cambio di lingua) o testo grezzo."""
+        self._js("appErrore(" + json.dumps(key) + "," + json.dumps(titolo, ensure_ascii=False) + ","
+                 + json.dumps(testo, ensure_ascii=False) + ")")
+
+    def _lezione_errore(self, key, kind, msg, codice=None, valori=None):
         """Errore su una lezione: titolo + messaggio GENTILI a seconda del tipo o del
         contenuto. Gli errori 'grezzi' dell'API Gemini (503/429/rete) vengono tradotti
-        in qualcosa di comprensibile invece di mostrare il JSON dell'errore."""
+        in qualcosa di comprensibile invece di mostrare il JSON dell'errore.
+        `codice`/`valori`: la frase dell'errore come codice traducibile, se il
+        pacchetto l'ha data (es. i motivi di un download fallito)."""
         low = (msg or "").lower()
+        # testo dell'errore: tradotto se ha il codice, altrimenti la frase com'e'
+        proprio = _m(codice, **(valori or {})) if codice else (msg or "")[:200]
         titoli = {
-            "LimiteGiornaliero": "Finite le lezioni di oggi",
-            "DownloadFallito": "Download non riuscito",
-            "ContenutoBloccato": "Contenuto non trascrivibile",
-            "ChiaveMancante": "Impossibile procedere",
-            "FfmpegMancante": "Impossibile procedere",
+            "DownloadFallito": "py.err.dl.t",
+            "ContenutoBloccato": "py.err.blocked.t",
+            "FfmpegMancante": "py.err.cannot.t",
         }
         if kind == "ModelloNonDisponibile":
             # il nome del modello e' gia' nel log della scheda (gemini.con_retry)
-            titolo = "Google ha ritirato un modello che l'app usa"
-            testo = ("Non dipende dalla tua lezione: Google ha spento uno dei modelli Gemini su cui "
-                     "si basa l'app. Cerca un aggiornamento dell'app; il lavoro già fatto è salvato "
-                     "e con «Riprova» riparte da dove si era fermato.")
+            titolo, testo = _m("py.err.model.t"), _m("py.err.model.desc")
+        elif kind == "LimiteGiornaliero":
+            titolo, testo = _m("py.err.daily.t"), _m("py.err.daily.d")
+        elif kind == "ChiaveMancante":
+            titolo, testo = _m("py.err.nokey.t"), _m("py.err.nokey.d")
         elif kind in titoli:
-            titolo, testo = titoli[kind], (msg or "")[:200]
+            titolo, testo = _m(titoli[kind]), proprio
         elif any(x in low for x in ("503", "unavailable", "high demand", "overloaded")):
-            titolo = "Google è sovraccarico in questo momento"
-            testo = ("I server di Gemini sono molto richiesti adesso: è un intoppo temporaneo, "
-                     "non un problema della tua lezione. Aspetta qualche minuto e premi «Riprova» "
-                     "sulla scheda: il lavoro già fatto è salvato e riparte da dove si era fermato.")
+            titolo, testo = _m("py.err.busy.t"), _m("py.err.busy.d")
         elif "429" in low or "resource_exhausted" in low or "rate limit" in low:
-            titolo = "Troppe richieste in questo momento"
-            testo = ("Gemini sta limitando le richieste (troppe in poco tempo). Aspetta un minuto "
-                     "e premi «Riprova» sulla scheda: riprende da dove era.")
+            titolo, testo = _m("py.err.rate.t"), _m("py.err.rate.d")
         elif any(x in low for x in ("timed out", "timeout", "connection", "getaddrinfo",
                                      "temporary failure", "network", "ssl", "urlopen")):
-            titolo = "Problema di connessione"
-            testo = ("Sembra un problema di rete. Controlla la connessione e premi «Riprova» "
-                     "sulla scheda per riprendere.")
+            titolo, testo = _m("py.err.net.t"), _m("py.err.net.d")
         else:
-            titolo, testo = "Errore durante l'elaborazione", (msg or "")[:200]
-        self._js("appErrore(" + json.dumps(key) + "," +
-                 json.dumps(titolo) + "," + json.dumps(testo) + ")")
+            titolo, testo = _m("py.err.generic.t"), proprio
+        self._errore_scheda(key, titolo, testo)
 
 
 # --- Controllo runtime WebView2 -------------------------------------------
@@ -1074,7 +1097,23 @@ def _avvisa_webview2_mancante() -> None:
 def _dopo_avvio(api):
     """Girato in un thread da webview.start, a GUI gia' su. Controlla se c'e' una
     versione piu' nuova su GitHub e, se si', mostra il banner in UI. Silenzioso su
-    ogni errore (niente rete, repo non configurato, GUI non ancora pronta)."""
+    ogni errore (niente rete, repo non configurato, GUI non ancora pronta).
+
+    Prima legge modelli.json: qui servono solo i limiti (contatore "ore rimaste");
+    i modelli veri li sceglie il processo della coda, che lo rilegge per conto suo."""
+    try:
+        k = apikey.leggi()
+        client = gemini.crea_client(k, config.TIMEOUT_CHECK_UPDATE_S) if k else None
+    except Exception:
+        client = None
+    try:
+        rpd_prima = config.RPD_TRASCRIZIONE
+        modelli.prepara(client)
+        if config.RPD_TRASCRIZIONE != rpd_prima:
+            api._window.events.loaded.wait(15)
+            api._js("appQuota(" + json.dumps(api._quota_info()) + ")")
+    except Exception:
+        pass
     try:
         agg = aggiornamenti.controlla()
     except Exception:

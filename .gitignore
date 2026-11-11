@@ -9,6 +9,7 @@ env/
 cache/
 debug_coda.log
 aggiornamenti.json
+modelli_cache.json
 .quota.json
 
 # --- Output del build (si rigenerano; alcuni file sono enormi) ---

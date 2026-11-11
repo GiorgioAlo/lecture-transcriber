@@ -16,7 +16,7 @@ from google import genai
 from google.genai import types
 
 from . import config
-from .errors import (ChiaveMancante, ContenutoBloccato, Interrotto, LimiteGiornaliero,
+from .errors import (ChiaveMancante, ContenutoBloccato, Interrotto, LimiteGiornaliero, Messaggio,
                      ModelloNonDisponibile)
 
 # Nasconde i warning rumorosi del client (AFC / non-text-parts).
@@ -52,7 +52,7 @@ def crea_client(chiave: str, timeout_s: float | None = None) -> genai.Client:
     il timeout in millisecondi (HttpOptions)."""
     chiave = (chiave or "").strip()
     if not chiave:
-        raise ChiaveMancante("Manca la chiave API di Gemini.")
+        raise ChiaveMancante(Messaggio("Manca la chiave API di Gemini.", "py.err.nokey.d"))
     http_options = types.HttpOptions(timeout=int(timeout_s * 1000)) if timeout_s else None
     return genai.Client(api_key=chiave, http_options=http_options)
 
@@ -133,8 +133,31 @@ def _sembra_modello_ritirato(e: Exception, modello: str) -> bool:
     (es. un file caricato)."""
     if getattr(e, "code", None) != 404 or getattr(e, "status", None) != "NOT_FOUND":
         return False
-    testo = f"{getattr(e, 'message', '') or ''} {e}"
-    return re.search(rf"models/{re.escape(modello)}(?![\w.-])", testo) is not None
+    return re.search(rf"models/{re.escape(modello)}(?![\w.-])", _testo_errore(e)) is not None
+
+
+def _testo_errore(e: Exception) -> str:
+    return f"{getattr(e, 'message', '') or ''} {e}"
+
+
+def _chiuso_ai_nuovi(e: Exception) -> bool:
+    """Ritiro DICHIARATO nel messaggio, anche se il modello "esiste" ancora.
+
+    Misurato il 2026-11-10 su gemini-2.5-pro: 404 NOT_FOUND 'This model
+    models/gemini-2.5-pro is no longer available to new users. Please update your
+    code to use models/gemini-3.1-pro-preview…', mentre `models.get` dice che
+    esiste (lo usano ancora le chiavi vecchie). Per una chiave nuova e' fermo
+    per sempre: la frase esplicita vale come conferma."""
+    return "no longer available" in _testo_errore(e).lower()
+
+
+def _sostituto_suggerito(e: Exception, modello: str) -> str | None:
+    """Il modello che Google consiglia al posto di quello ritirato, se lo dice."""
+    m = re.search(r"\buse models/(gemini-[a-z0-9.-]+)", _testo_errore(e), re.IGNORECASE)
+    if not m:
+        return None
+    nome = m.group(1).rstrip(".").lower()
+    return nome if nome != modello else None
 
 
 def _ritiro_confermato(client, modello: str) -> bool:
@@ -181,11 +204,13 @@ def con_retry(
         except ContenutoBloccato:
             raise               # Gemini ha rifiutato il contenuto: inutile ritentare
         except Exception as e:
-            if (client is not None and modello
-                    and _sembra_modello_ritirato(e, modello)
-                    and _ritiro_confermato(client, modello)):
-                log(f"🛑 [{descrizione}] il modello {modello} non esiste più (ritirato da Google)")
-                raise ModelloNonDisponibile(modello) from e
+            if modello and _sembra_modello_ritirato(e, modello) and (
+                    _chiuso_ai_nuovi(e)
+                    or (client is not None and _ritiro_confermato(client, modello))):
+                sost = _sostituto_suggerito(e, modello)
+                log(f"🛑 [{descrizione}] il modello {modello} non è più disponibile (ritirato da Google)"
+                    + (f" — Google suggerisce {sost}" if sost else ""))
+                raise ModelloNonDisponibile(modello, sost) from e
             rd, per_giorno = _dettagli_errore(e)
             if per_giorno:
                 log(f"🛑 [{descrizione}] quota giornaliera esaurita")

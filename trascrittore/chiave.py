@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import keyring
 
+from .errors import Messaggio
+
 SERVICE = "TrascriviLezioni"   # voce nel Gestore Credenziali di Windows
 USER = "gemini"                # app a utente singolo: un nome fisso basta
 
@@ -40,7 +42,7 @@ def valida(chiave: str) -> tuple[bool, str]:
     riesco a verificare" (es. senza internet)."""
     chiave = (chiave or "").strip()
     if not chiave:
-        return False, "Incolla una chiave."
+        return False, Messaggio("Incolla una chiave.", "py.key.empty")
     try:
         from google import genai
         client = genai.Client(api_key=chiave)
@@ -50,8 +52,10 @@ def valida(chiave: str) -> tuple[bool, str]:
         code = getattr(e, "code", None)
         msg = str(e).lower()
         if code in (400, 401, 403) or "api key not valid" in msg or "api_key_invalid" in msg:
-            return False, "La chiave non è valida. Controlla di averla copiata per intero."
-        return False, "Non riesco a verificare la chiave adesso (controlla la connessione a internet)."
+            return False, Messaggio("La chiave non è valida. Controlla di averla copiata per intero.",
+                                    "py.key.invalid")
+        return False, Messaggio("Non riesco a verificare la chiave adesso (controlla la connessione "
+                                "a internet).", "py.key.nocheck")
 
 
 def anteprima(chiave: str) -> str:
