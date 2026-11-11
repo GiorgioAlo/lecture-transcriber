@@ -646,5 +646,70 @@ check("config.VERSION e' semver X.Y.Z", re.fullmatch(r"\d+\.\d+\.\d+", config.VE
 check("IT ed EN hanno le stesse chiavi py.*", _k_it == _k_en)
 check("ogni codice usato in Python ha la sua traduzione", not (_usati - _k_it))
 
+print("\n#  punto 2: segni del tempo nei documenti (~10 min)")
+from trascrittore import tempi as _tempi
+check("etichette: 10 min / 1 h / 1 h 10 min / 2 h 10 min",
+      [_tempi.etichetta(s) for s in (600, 3600, 4200, 7800)]
+      == ["~10 min", "~1 h", "~1 h 10 min", "~2 h 10 min"])
+_p95 = [(570.0, 9000)] * 10                                     # 95 min = 10 pezzi da 9:30
+_s95 = _tempi.posizioni(_p95)
+check("95 min -> segni da ~10 a ~1 h 30 min (9)",
+      [e for _, e in _s95] == ["~10 min", "~20 min", "~30 min", "~40 min", "~50 min", "~1 h",
+                               "~1 h 10 min", "~1 h 20 min", "~1 h 30 min"])
+check("~10 min cade nel 2o pezzo, in proporzione (9000+30/570*9000)",
+      abs(_s95[0][0] - (9000 + 30 / 570 * 9000) / 90000) < 1e-9)
+check("lezione sotto i 10 minuti -> nessun segno", _tempi.posizioni([(480.0, 5000)]) == [])
+check("niente segno nell'ultimo minuto", [e for _, e in _tempi.posizioni([(630.0, 5000)])] == [])
+check("niente mappa -> nessun segno", _tempi.posizioni(None) == [])
+_muto = _tempi.posizioni([(600.0, 6000), (600.0, 0), (600.0, 6000)])
+check("pezzo muto: si tiene conto del silenzio (~10 e ~20 nello stesso punto)",
+      [round(f, 3) for f, _ in _muto] == [0.5, 0.5])
+check("spezzone che parte al minuto 5: etichette = tempi del VIDEO",
+      [e for _, e in _tempi.posizioni([(1800.0, 9000)], 300)] == ["~10 min", "~20 min", "~30 min"])
+
+_tdir = Path(tempfile.mkdtemp())
+_parti = ["a" * 100, "", "b" * 50]
+_tempi.salva(_tdir, [600.0, 600.0, 600.0], _parti)
+_grezza = "\n".join(p for p in _parti if p)
+check("mappa salvata e riletta (coerente con la grezza)",
+      _tempi.carica(_tdir, _grezza) == [(600.0, 100), (600.0, 0), (600.0, 50)])
+check("grezza diversa (mappa vecchia) -> ignorata", _tempi.carica(_tdir, "x" * 5000) is None)
+_tempi.salva(_tdir, [600.0, 0.0], ["a", "b"])
+check("durata illeggibile -> niente mappa", not (_tdir / _tempi.FILE).exists()
+      and _tempi.carica(_tdir, "a\nb") is None)
+
+_frasi = " ".join(f"Frase numero {i} della lezione." for i in range(1, 41))
+_ins = _tempi.inserisci(_frasi, [(0.5, "~10 min")])
+_righe = _ins.split("\n")
+check("segno inserito come riga a se'", "[⏱ ~10 min]" in _righe and len(_righe) == 3)
+check("segno all'inizio di una frase, circa a meta' testo",
+      _righe[0].endswith(".") and _righe[2].startswith("Frase numero 2")
+      and abs(len(_righe[0]) - len(_frasi) / 2) < 40)
+check("parole invariate (solo una riga in piu')",
+      _ins.replace("\n[⏱ ~10 min]\n", " ") == _frasi)
+check("nessun segno -> testo identico", _tempi.inserisci(_frasi, []) == _frasi)
+_con_nota = ("Prima frase. Seconda frase.\n"
+             f"{config.MARCATORE_ERRORE}: questa parte non è stata tradotta (Gemini era occupato).]\n"
+             "Terza frase. Quarta frase.")
+_ins_n = _tempi.inserisci(_con_nota, [(0.5, "~10 min")])
+check("mai dentro una nota (la riga-nota resta intera)",
+      any(r.startswith(config.MARCATORE_ERRORE) and r.endswith("occupato).]") for r in _ins_n.split("\n"))
+      and "[⏱ ~10 min]" in _ins_n)
+_doppi = _tempi.inserisci("Unica frase corta.", [(0.4, "~10 min"), (0.6, "~20 min")])
+check("due segni sulla stessa frase -> uno solo", _doppi.count("[⏱") == 1)
+
+_doc_t = _tempi.inserisci(_frasi, [(0.5, "~1 h 10 min")])
+_cr = documents.genera(_doc_t, tmp / "Tempi_IT", "Lezione — Tempi", "nota", ["docx", "txt", "md"], "it")
+_paras = [p for p in _Doc(str(_cr[0])).paragraphs if p.text.strip()]
+_pt = [p for p in _paras if p.text == "⏱ ~1 h 10 min"]
+check("docx: segno come paragrafo a se', piccolo e grigio",
+      len(_pt) == 1 and _pt[0].runs[0].font.size.pt == 9
+      and str(_pt[0].runs[0].font.color.rgb) == "808080"
+      and not any("[⏱" in p.text for p in _paras))
+_txt_t = _cr[1].read_text(encoding="utf-8")
+check("txt: riga del segno separata dal testo", "\n\n⏱ ~1 h 10 min\n\n" in _txt_t)
+check("md: segno in corsivo con la tilde neutralizzata",
+      "\n\n*⏱ \\~1 h 10 min*\n\n" in _cr[2].read_text(encoding="utf-8"))
+
 print(f"\n==== RISULTATO: {ok} PASS, {ko} FAIL ====")
 raise SystemExit(1 if ko else 0)

@@ -176,7 +176,7 @@ def _nota(riga: str, lingua: str | None) -> tuple[str, str]:
 # --- Lettura del testo in blocchi (comune a tutti i formati) --------------
 def _blocchi(testo: str, lingua: str | None = None) -> list[tuple[str, str]]:
     """Divide il testo finale in blocchi ("titolo" | "punto" | "para" | "nota" |
-    "fine", testo).
+    "fine" | "tempo", testo). "tempo" = il segno "⏱ ~10 min" (vedi tempi.py).
 
     La prosa viene accumulata e passata al reflow; un titolo, un elenco puntato
     o una nota interrompe il flusso (viene emesso a parte), poi la prosa riprende.
@@ -193,7 +193,10 @@ def _blocchi(testo: str, lingua: str | None = None) -> list[tuple[str, str]]:
         s = riga.strip()
         if not s:
             continue
-        if _e_nota(s):
+        if s.startswith(config.MARCATORE_TEMPO):
+            _svuota_prosa()
+            blocchi.append(("tempo", s[1:].rstrip("]").strip()))     # "⏱ ~10 min"
+        elif _e_nota(s):
             _svuota_prosa()
             blocchi.append(_nota(s, lingua))
         elif _sembra_titolo(s):
@@ -249,12 +252,26 @@ def _aggiungi_nota(doc, testo, fine=False):
         run.bold = True
 
 
+def _aggiungi_tempo(doc, testo):
+    """Il segno del tempo: riga a se', piccola e grigia (orienta senza disturbare)."""
+    para = doc.add_paragraph()
+    fmt = para.paragraph_format
+    fmt.space_before = Pt(8)
+    fmt.space_after = Pt(4)
+    fmt.keep_with_next = True               # mai da solo in fondo a una pagina
+    run = para.add_run(testo)
+    run.font.size = Pt(9)
+    run.font.color.rgb = RGBColor(0x80, 0x80, 0x80)
+
+
 def genera_docx(testo: str, path: Path, titolo: str, note: str, lingua: str | None = None) -> Path:
     """Scrive il documento Word e ritorna il percorso creato."""
     doc = Document()
     _aggiungi_copertina(doc, titolo, _sottotitolo(), note)
     for tipo, contenuto in _blocchi(testo, lingua):
-        if tipo in ("nota", "fine"):
+        if tipo == "tempo":
+            _aggiungi_tempo(doc, contenuto)
+        elif tipo in ("nota", "fine"):
             _aggiungi_nota(doc, contenuto, fine=(tipo == "fine"))
         elif tipo == "titolo":
             doc.add_paragraph(contenuto, style="Heading 2")
@@ -359,7 +376,9 @@ def genera_md(testo: str, path: Path, titolo: str, note: str, lingua: str | None
     testa += ["", "---"]
     pezzi: list[tuple[str, str]] = [("testa", "\n".join(testa))]
     for tipo, contenuto in _blocchi(testo, lingua):
-        if tipo == "nota":          # citazione = riquadro nelle app Markdown
+        if tipo == "tempo":         # "~" da solo puo' diventare barrato (GitHub): lo neutralizzo
+            pezzi.append((tipo, "*" + _md_testo(contenuto).replace("~", "\\~") + "*"))
+        elif tipo == "nota":        # citazione = riquadro nelle app Markdown
             pezzi.append((tipo, "> **" + _md_testo(contenuto) + "**"))
         elif tipo == "fine":
             pezzi.append((tipo, "> *" + _md_testo(contenuto) + "*"))

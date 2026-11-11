@@ -179,6 +179,9 @@ MARCATORE_ERRORE = "[⚠️ NOTA"
 # finisce il testo non corretto. NON serve a riconoscere i risultati incompleti
 # (per quello basta MARCATORE_ERRORE, che c'e' sempre all'inizio della parte).
 MARCATORE_FINE = "[⚠️ FINE"
+# Riga "segno del tempo" nei DOCUMENTI ("[⏱ ~10 min]"): la mette il codice al momento
+# di scrivere il documento (vedi tempi.py), MAI Gemini e mai nei file di cache.
+MARCATORE_TEMPO = "[⏱"
 
 # --- Le 5 fasi mostrate dalla barra di avanzamento ------------------------
 # L'ordine e il testo DEVONO combaciare con la UI (ui/index.html) e con

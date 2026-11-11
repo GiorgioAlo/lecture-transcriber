@@ -14,6 +14,8 @@
 - I modelli da usare possono essere cambiati a distanza (file `modelli.json` nel repo): se Google ne
   ritira uno, l'app passa al sostituto senza bisogno di una nuova versione.
 - La versione da riga di comando si installa anche con Python 3.11 (prima serviva il 3.12).
+- Segni del tempo nei documenti ("⏱ ~10 min", "⏱ ~20 min", … "⏱ ~1 h 10 min") per ritrovare
+  più o meno un punto della lezione nel video. Sono approssimati: servono per orientarsi.
 
 ## 1.2.1
 - Risolto un problema per cui l'avviso di nuova versione poteva non comparire.

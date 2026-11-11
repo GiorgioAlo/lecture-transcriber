@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import config, documents, languages, modelli, textproc, transcribe, util
+from . import config, documents, languages, modelli, tempi, textproc, transcribe, util
 from .errors import Interrotto, ModelloNonDisponibile
 from .gemini import crea_client, _attendi_annullabile
 from .progress import Reporter
@@ -104,6 +104,7 @@ def fase_trascrizione(job: Job, client, reporter: Reporter, work_dir: Path, rifa
         reporter.fase(0, "fatta"); reporter.fase(1, "attiva")
         raw = Path(job.testo).read_text(encoding="utf-8")
         util.scrivi_testo(grezza, raw)
+        tempi.cancella(work_dir)        # testo fornito: nessun tempo noto, niente segni
         reporter.fase(1, "fatta"); reporter.avanzamento(_pct(1))
     elif _fase_valida(grezza, rifai):
         reporter.log("Trascrizione gia presente, la riuso")
@@ -232,6 +233,10 @@ def fase_testo(job: Job, client, reporter: Reporter, work_dir: Path, raw: str, r
     nota = f"Trascrizione: {fonte} | Pulizia e traduzione: Gemini ({config.TEXT_MODEL})"
     if job.corso:
         nota = f"Corso: {job.corso} | " + nota
+    # Segni "⏱ ~10 min" (solo nei documenti: i testi in cache restano senza)
+    segni = tempi.posizioni(tempi.carica(work_dir, raw), (job.inizio or 0) * 60)
+    if segni:
+        reporter.log(f"⏱ {len(segni)} segni del tempo nei documenti")
     documenti: list[Path] = []
     for k, lang in enumerate(job.lingue_output):
         nome_lingua = languages.nome_italiano(lang)
@@ -243,7 +248,8 @@ def fase_testo(job: Job, client, reporter: Reporter, work_dir: Path, raw: str, r
             vecchio = documents.percorso_documento(base, f)
             if f not in formati and vecchio.exists():
                 vecchio.unlink(missing_ok=True)
-        for path in documents.genera(testi.get(lang, ""), base, titolo, nota, formati, lang):
+        testo_doc = tempi.inserisci(testi.get(lang, ""), segni)
+        for path in documents.genera(testo_doc, base, titolo, nota, formati, lang):
             reporter.log(f"💾 {path.name}")
             documenti.append(path)
         reporter.avanzamento(_pct(4, (k + 1) / max(1, len(job.lingue_output))))

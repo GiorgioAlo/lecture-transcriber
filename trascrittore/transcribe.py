@@ -30,7 +30,7 @@ from pathlib import Path
 
 from google.genai import types
 
-from . import audio, config, util
+from . import audio, config, tempi, util
 from .errors import ContenutoBloccato, Interrotto, Messaggio
 from .gemini import IMPOSTAZIONI_SICUREZZA, con_retry
 from .progress import Reporter
@@ -499,4 +499,6 @@ def trascrivi_chunks(
         # finiscono in background (la cache atomica rende innocuo il loro arrivo).
         ex.shutdown(wait=False, cancel_futures=True)
 
+    # Mappa durata/testo di ogni pezzo: serve ai segni "⏱ ~10 min" nei documenti
+    tempi.salva(work_dir, [durate[i] for i in range(n)], [parti.get(i, "") for i in range(n)])
     return "\n".join(parti[i] for i in sorted(parti) if parti[i])
