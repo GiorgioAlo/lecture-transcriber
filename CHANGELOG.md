@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.3.0 (in preparazione)
+## 1.3.0
 - Scegli il formato dei documenti nelle Impostazioni: Word, testo semplice (.txt) e/o Markdown (.md).
   Anche da riga di comando (`--formats docx txt md`) e su Colab (campo FORMATS).
 - Al primo avvio l'app parte nella lingua del computer (italiano, altrimenti inglese) e la schermata
