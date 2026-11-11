@@ -70,7 +70,9 @@ The app (and Colab) need a free personal key from Google:
 2. Choose the output **languages** (Italian and English by default).
 3. Start — the app transcribes, cleans up the text and writes a **Word document** per language.
    Prefer plain text or Markdown? Tick `.txt` / `.md` in **Settings** (⚙) — you can pick more than one.
-   (Webex "personal room" recordings also need a `cookies.txt` exported from your browser.)
+   (Webex "personal room" recordings also need a `cookies.txt` exported from your browser,
+   or the recording's direct `hls.m3u8` link copied from the browser's developer tools —
+   the app explains both.)
 
 ## ⏳ If it's slow, or a lecture stops with a "server busy" message
 The app uses Google Gemini on the **free tier**, so it shares capacity with everyone else.

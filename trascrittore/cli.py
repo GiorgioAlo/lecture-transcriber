@@ -26,7 +26,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import config, documents, languages, percorsi
+from . import config, documents, download, languages, percorsi
 from .errors import ErrorePipeline, ModelloNonDisponibile
 from .pipeline import Job, esegui
 from .progress import ReporterConsole
@@ -128,6 +128,8 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             if args.name and len(args.sources) == 1:
                 name = args.name
+            elif is_link and download.e_webex_diretto(src):
+                name = download.nome_webex_diretto(src)   # "Webex <recording no.>": the link has no title
             else:
                 name = "Lecture" if is_link else Path(src).stem
             job = Job(

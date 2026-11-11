@@ -4,11 +4,13 @@ Scarica SOLO l'audio (non il video) in `work_dir/scaricato.<ext>`; la pipeline
 poi lo normalizza a mono 16k e lo spezza come un qualsiasi file locale.
 
 Per Webex serve un file cookies.txt (sessione autenticata) e talvolta una
-password del video. yt-dlp viene invocato come modulo dell'ambiente corrente
+password del video, OPPURE il link diretto al flusso (`hls.m3u8`, vedi
+`e_webex_diretto`), che porta il permesso dentro di se' e va senza cookie. yt-dlp viene invocato come modulo dell'ambiente corrente
 (`python -m yt_dlp`) così usa sempre la versione giusta.
 """
 from __future__ import annotations
 
+import base64
 import os
 import queue
 import re
@@ -60,6 +62,54 @@ def e_webex(url: str) -> bool:
         return "webex.com" in (urlparse(url).netloc or "").lower()
     except Exception:
         return "webex.com" in (url or "").lower()
+
+
+def e_webex_diretto(url: str) -> bool:
+    """Link DIRETTO al flusso di una registrazione Webex (il `hls.m3u8` che il lettore
+    scarica; si copia dal browser con F12 → Rete → "m3u8"). Il permesso e' scritto
+    DENTRO il link (ticket + token), quindi NON servono i cookie; pero' SCADE (ore?
+    misura in STATO.md) e porta l'identita' di chi l'ha copiato.
+    Forma: https://<x>.webex.com/nbr/MultiThreadDownloadServlet/<base64>/hls.m3u8?..."""
+    if not e_webex(url):
+        return False
+    try:
+        path = (urlparse(url).path or "").lower()
+    except Exception:
+        return False
+    return "/nbr/multithreaddownloadservlet/" in path or path.endswith(".m3u8")
+
+
+def _parametri_webex_diretto(url: str) -> dict[str, str]:
+    """I parametri codificati (base64) nel link diretto: siteid, recordid, ticket...
+    {} se il link non ha quella forma o non si decodifica."""
+    try:
+        parti = (urlparse(url).path or "").split("/")
+        i = [p.lower() for p in parti].index("multithreaddownloadservlet")
+        blob = parti[i + 1]
+        blob += "=" * (-len(blob) % 4)
+        testo = base64.urlsafe_b64decode(blob.replace("+", "-").replace("/", "_")).decode("utf-8", "replace")
+        return {k: v for k, _, v in (c.partition("=") for c in testo.split("&")) if k}
+    except Exception:
+        return {}
+
+
+def id_registrazione_webex(url: str) -> str | None:
+    """Identita' STABILE di una registrazione Webex da un link diretto ("siteid:recordid").
+    Ogni copia del link ha ticket/token diversi, ma la registrazione resta quella:
+    serve a riusare la cache (download, trascrizione) se l'utente ricopia il link."""
+    p = _parametri_webex_diretto(url)
+    rec = (p.get("recordid") or "").strip()
+    if not rec.isdigit():
+        return None
+    return f"{(p.get('siteid') or '').strip()}:{rec}"
+
+
+def nome_webex_diretto(url: str) -> str:
+    """Nome della lezione per un link diretto: il link NON contiene il titolo (yt-dlp
+    lo chiama solo "hls"), quindi "Webex <numero registrazione>" (unico e stabile,
+    cosi' i documenti di due lezioni non si sovrascrivono)."""
+    ident = id_registrazione_webex(url)
+    return f"Webex {ident.split(':')[1]}" if ident else "Webex"
 
 
 def _url_valido(url: str) -> bool:
@@ -281,7 +331,12 @@ def _esegui_download(
     files = _scaricati_completi(work_dir)
     if proc.returncode != 0 or not files:
         testo = "\n".join(coda_errori).lower()
-        if e_webex(url):
+        if e_webex_diretto(url):
+            # Il link diretto porta il permesso dentro: se non va e' quasi sempre scaduto
+            # (misurato: un link di una settimana prima → 403 "Invalid request").
+            msg = Messaggio("Il link diretto di Webex è scaduto o non è valido: ricopialo dal browser "
+                            "(F12 → Rete → m3u8) e aggiungi di nuovo la lezione.", "py.dl.webexdirect")
+        elif e_webex(url):
             msg = Messaggio("Non riesco a scaricare da Webex. I cookie potrebbero essere scaduti "
                             "(riesportali) o il video è protetto da password.", "py.dl.webex")
         elif "sign in" in testo or "login" in testo or "private" in testo:

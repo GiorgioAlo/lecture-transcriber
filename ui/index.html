@@ -349,6 +349,7 @@ try{var _th=localStorage.getItem('ui_theme');if(_th==='dark')document.documentEl
           <button class="btn primary" id="link-add" onclick="addLink()" data-i18n="link.add">Aggiungi</button>
         </div>
         <p class="hint" id="link-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg> <span data-i18n="link.hint">Webex, YouTube e altri siti. Scarichiamo solo l'audio.</span></p>
+        <p class="hint" id="link-direct" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> <span data-i18n="link.direct">Link diretto di Webex: non servono i cookie. Scade presto: avvia la trascrizione subito e non passarlo ad altri (contiene il tuo accesso).</span></p>
         <p class="ob-err" id="link-need-cookie" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span data-i18n="link.needcookie">Per aggiungere una lezione Webex carica prima i cookie (qui sotto).</span></p>
 
         <div class="cookie" id="webex-cookie" hidden>
@@ -372,6 +373,16 @@ try{var _th=localStorage.getItem('ui_theme');if(_th==='dark')document.documentEl
               <li>Clicca l'<b>icona dell'estensione</b> e premi <b>Export</b>.</li>
               <li>Parte il download di un file (di solito chiamato come il sito, es. <i>politecnicomilano.webex.com_cookies.txt</i>).</li>
               <li>Torna qui, premi <b>Carica cookies</b> e scegli quel file.</li>
+            </ol>
+          </div>
+          <div class="guide" style="margin-top:6px">
+            <button class="guide-h" type="button" onclick="toggleGuida(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg> <span data-i18n="webex.guide2h">Senza estensione: copia il link diretto</span> <span data-i18n="webex.guidetime">(~1 minuto)</span></button>
+            <ol class="guide-s" hidden data-i18n-html="webex.steps2">
+              <li>Apri la <b>registrazione</b> Webex nel browser (Chrome o Edge) e <b>accedi</b>.</li>
+              <li>Premi <b>F12</b> e scegli la scheda <b>Rete</b> (Network).</li>
+              <li>Fai partire il video e nella casella <b>Filtro</b> scrivi <b>m3u8</b>.</li>
+              <li>Sulla riga <b>hls.m3u8</b>: tasto destro → <b>Copia</b> → <b>Copia URL</b>.</li>
+              <li>Incollalo qui sopra e premi <b>Aggiungi</b>: non servono i cookie. Il link <b>scade</b>: avvia subito.</li>
             </ol>
           </div>
         </div>
@@ -550,6 +561,9 @@ var I18N = {
     'drop.sub':'MP4, MP3, WAV, M4A… <a href="#" onclick="event.stopPropagation();sfoglia();return false">sfoglia il computer</a>',
     'link.ph':'Incolla un link: Webex, YouTube, altro…','link.add':'Aggiungi',
     'link.hint':'Webex, YouTube e altri siti. Scarichiamo solo l\'audio.',
+    'link.direct':'Link diretto di Webex: non servono i cookie. Scade presto: avvia la trascrizione subito e non passarlo ad altri (contiene il tuo accesso).',
+    'webex.guide2h':'Senza estensione: copia il link diretto',
+    'webex.steps2':'<li>Apri la <b>registrazione</b> Webex nel browser (Chrome o Edge) e <b>accedi</b>.</li><li>Premi <b>F12</b> e scegli la scheda <b>Rete</b> (Network).</li><li>Fai partire il video e nella casella <b>Filtro</b> scrivi <b>m3u8</b>.</li><li>Sulla riga <b>hls.m3u8</b>: tasto destro → <b>Copia</b> → <b>Copia URL</b>.</li><li>Incollalo qui sopra e premi <b>Aggiungi</b>: non servono i cookie. Il link <b>scade</b>: avvia subito.</li>',
     'link.needcookie':'Per aggiungere una lezione Webex carica prima i cookie (qui sotto).',
     'webex.access':'🎥 Accesso Webex','webex.load':'Carica cookies',
     'webex.haspwd':'La lezione ha una password?','webex.pwdph':'Password del video',
@@ -653,6 +667,7 @@ var I18N = {
     'py.err.dl.t':'Download non riuscito',
     'py.dl.badurl':'Link non valido: inserisci un indirizzo che inizia con http:// o https://.',
     'py.dl.webex':'Non riesco a scaricare da Webex. I cookie potrebbero essere scaduti (riesportali) o il video è protetto da password.',
+    'py.dl.webexdirect':'Il link diretto di Webex è scaduto o non è valido: ricopialo dal browser (F12 → Rete → m3u8) e aggiungi di nuovo la lezione.',
     'py.dl.private':'Il video è privato o richiede l\'accesso: non posso scaricarlo.',
     'py.dl.unsupported':'Questo link non è supportato per il download.',
     'py.dl.generic':'Non sono riuscito a scaricare l\'audio dal link (controlla il link e la connessione).',
@@ -692,6 +707,9 @@ var I18N = {
     'drop.sub':'MP4, MP3, WAV, M4A… <a href="#" onclick="event.stopPropagation();sfoglia();return false">browse your computer</a>',
     'link.ph':'Paste a link: Webex, YouTube, other…','link.add':'Add',
     'link.hint':'Webex, YouTube and other sites. We only download the audio.',
+    'link.direct':'Direct Webex link: no cookies needed. It expires soon: start the transcription right away and don\'t share it (it contains your access).',
+    'webex.guide2h':'Without the extension: copy the direct link',
+    'webex.steps2':'<li>Open the Webex <b>recording</b> in the browser (Chrome or Edge) and <b>sign in</b>.</li><li>Press <b>F12</b> and pick the <b>Network</b> tab.</li><li>Start the video and type <b>m3u8</b> in the <b>Filter</b> box.</li><li>On the <b>hls.m3u8</b> row: right click → <b>Copy</b> → <b>Copy URL</b>.</li><li>Paste it above and press <b>Add</b>: no cookies needed. The link <b>expires</b>: start right away.</li>',
     'link.needcookie':'To add a Webex lecture, load the cookies first (below).',
     'webex.access':'🎥 Webex access','webex.load':'Load cookies',
     'webex.haspwd':'Does the lecture have a password?','webex.pwdph':'Video password',
@@ -795,6 +813,7 @@ var I18N = {
     'py.err.dl.t':'Download failed',
     'py.dl.badurl':'Invalid link: enter an address that starts with http:// or https://.',
     'py.dl.webex':'I can\'t download from Webex. The cookies may have expired (export them again) or the video is password-protected.',
+    'py.dl.webexdirect':'The direct Webex link has expired or isn\'t valid: copy it again from the browser (F12 → Network → m3u8) and add the lecture again.',
     'py.dl.private':'The video is private or requires signing in: I can\'t download it.',
     'py.dl.unsupported':'This link is not supported for download.',
     'py.dl.generic':'I couldn\'t download the audio from the link (check the link and your connection).',
@@ -1117,15 +1136,23 @@ function _chiudiMenuLingue(){ var m=document.getElementById('menu'); if(m) m.hid
   _renderChips();
 })();
 var _cookiesOk = false;
+/* link DIRETTO al flusso Webex (hls.m3u8, copiato da F12 → Rete): il permesso e' nel
+   link, quindi NIENTE cookie (stessa regola di download.e_webex_diretto in Python) */
+function _webexDiretto(v){
+  return /webex\.com/i.test(v) && (/\/nbr\/MultiThreadDownloadServlet\//i.test(v) || /\.m3u8(\?|#|$)/i.test(v));
+}
+/* Webex che ha bisogno dei cookie = Webex ma non link diretto */
+function _webexCookie(v){ return /webex\.com/i.test(v) && !_webexDiretto(v); }
 function onLinkInput(v){
-  var isWebex = /webex\.com/i.test(v);
-  document.getElementById('webex-cookie').hidden = !isWebex;
-  var hint = document.getElementById('link-hint'); if(hint) hint.hidden = isWebex;
+  var conCookie = _webexCookie(v), diretto = _webexDiretto(v);
+  document.getElementById('webex-cookie').hidden = !conCookie;
+  var hint = document.getElementById('link-hint'); if(hint) hint.hidden = conCookie || diretto;
+  var dir = document.getElementById('link-direct'); if(dir) dir.hidden = !diretto;
   aggiornaBtnAggiungi();
 }
 function _inputWebex(){
   var el = document.getElementById('link-in');
-  return el ? /webex\.com/i.test(el.value) : false;
+  return el ? _webexCookie(el.value) : false;
 }
 function aggiornaBtnAggiungi(){
   var btn = document.getElementById('link-add'); if(!btn) return;
@@ -1217,8 +1244,8 @@ function addLink(){
   var el = document.getElementById('link-in'); var v = el.value.trim();
   if(!v){ el.focus(); return; }
   var isWebex = /webex\.com/i.test(v);
-  if(isWebex && !_cookiesOk){ toast('warn',t('t.needCookiesTitle'),t('t.needCookiesDesc')); return; }
-  var pwd = isWebex ? (document.getElementById('webex-pwd')||{}).value : '';
+  if(_webexCookie(v) && !_cookiesOk){ toast('warn',t('t.needCookiesTitle'),t('t.needCookiesDesc')); return; }
+  var pwd = _webexCookie(v) ? (document.getElementById('webex-pwd')||{}).value : '';
   pwd = (pwd||'').trim();
   addItem(v.length>46? v.slice(0,46)+'…' : v, _subLink(isWebex), isWebex?'webex':'link', v);
   var li = cardByPath(v);

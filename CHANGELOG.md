@@ -19,6 +19,9 @@
 - Risolto: una lezione con una pausa lunga (circa 10 minuti in cui nessuno parla ma la registrazione
   continua) finiva in errore. Ora la pausa viene semplicemente saltata. Se invece in tutta la
   registrazione non parla nessuno, l'app si ferma con un messaggio chiaro.
+- Webex senza cookie: si può incollare il link diretto della registrazione (`hls.m3u8`, copiato dal
+  browser con F12 → Rete). La guida è nell'app. Questi link scadono, quindi l'app li scarica subito
+  all'avvio della coda; se è scaduto lo dice chiaramente.
 
 ## 1.2.1
 - Risolto un problema per cui l'avviso di nuova versione poteva non comparire.

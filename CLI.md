@@ -96,6 +96,13 @@ because they require being logged in. Export a `cookies.txt` from your browser
 (e.g. a "Get cookies.txt" browser extension) while logged into Webex, then pass
 it with `--cookies cookies.txt`.
 
+**Without cookies: the direct link.** Open the recording in the browser (logged in),
+press F12 → **Network** tab, start the video and type `m3u8` in the filter. Right-click
+the `hls.m3u8` request → Copy → Copy URL, and pass that URL to `transcribe` (no
+`--cookies` needed). The link carries its own access, so it **expires** (use it right
+away) and **must not be shared**. The documents are named `Webex <recording number>`,
+since the link has no title.
+
 ## Notes
 
 - Your audio/transcripts are sent to Google Gemini for processing (see the

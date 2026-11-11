@@ -283,15 +283,18 @@ class Api:
         Per Webex serve prima il file cookie: senza, torna solo {webex:true}."""
         url = (url or "").strip()
         webex = dl.e_webex(url)
-        cookies = self._cookies_webex if webex else None
-        if webex and not cookies:
+        diretto = dl.e_webex_diretto(url)     # hls.m3u8: il permesso e' nel link, niente cookie
+        cookies = self._cookies_webex if (webex and not diretto) else None
+        if webex and not diretto and not cookies:
             return {"webex": True, "titolo": "", "durata_min": None}
         try:
             info = dl.info(url, cookies)
         except Exception:
             info = {"titolo": "", "durata": None}
         dmin = round(info["durata"] / 60) if info.get("durata") else None
-        return {"webex": webex, "titolo": info.get("titolo", ""), "durata_min": dmin}
+        # il link diretto non ha il titolo (yt-dlp dice solo "hls"): nome stabile dal link
+        titolo = dl.nome_webex_diretto(url) if diretto else info.get("titolo", "")
+        return {"webex": webex, "titolo": titolo, "durata_min": dmin}
 
     def _su_thread_gui(self, chiama):
         """Esegue `chiama()` sul thread della finestra (STA) e ne ritorna il valore.
@@ -801,11 +804,17 @@ class Api:
             return Job(sorgente=Path(key), nome=Path(key).stem, lingue_output=lingue, corso=corso,
                        formati=formati)
         webex = (tipo == "webex") or dl.e_webex(key)
-        cookies = self._cookies_webex if webex else None
-        if webex and not cookies:
+        diretto = dl.e_webex_diretto(key)     # link diretto hls.m3u8: niente cookie
+        cookies = self._cookies_webex if (webex and not diretto) else None
+        if webex and not diretto and not cookies:
             raise DownloadFallito(Messaggio("Carica prima il file dei cookie di Webex (riga 'Accesso Webex').",
                                             "py.dl.nocookies"))
         nome = (l.get("nome") or key).strip()
+        if diretto:
+            # SEMPRE il nome dal numero della registrazione (anche se Avvia arriva prima
+            # di info_link): la cartella di lavoro dipende dal nome, e deve restare la
+            # stessa ricopiando il link, se no la cache non si ritrova.
+            nome = dl.nome_webex_diretto(key)
         # NIENTE chiamate di rete qui: una `dl.info()` sincrona (fino a decine di secondi su
         # un link lento) bloccherebbe l'avvio del batch PRIMA che parta il processo figlio →
         # la UI resta "in corso", la barra sembra ferma e l'annullo non funziona (gli Event e

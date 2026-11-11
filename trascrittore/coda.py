@@ -76,20 +76,48 @@ class Prefetcher:
         # Se la lezione e' GIA' trascritta (grezza valida in cache), lo Stadio 1
         # la riusera' senza audio: inutile ri-scaricare/ri-estrarre (importante
         # per i link Webex, che altrimenti si ri-scaricherebbero per intero).
-        grezza = wd / "grezza.txt"
-        if not self._rifai and grezza.exists():
-            try:
-                if config.MARCATORE_ERRORE not in grezza.read_text(encoding="utf-8"):
-                    return
-            except Exception:
-                pass
+        if self._gia_trascritta(wd):
+            return
         wd.mkdir(parents=True, exist_ok=True)
         transcribe.prepara_audio(
             job.sorgente, wd, job.inizio, job.minuti, _ReporterSilente(self._ferma),
             url=job.url, cookies=job.cookies, password=job.password,
         )
 
+    def _scarica_subito_link_diretti(self) -> None:
+        """I link DIRETTI di Webex (hls.m3u8) SCADONO: non possono aspettare il loro
+        turno nel buffer (la 5a lezione partirebbe dopo decine di minuti). Li scarico
+        tutti SUBITO, all'avvio della coda (~30 s l'uno, nessuna API); l'estrazione e
+        la segmentazione restano al giro normale, che trova il file e lo riusa
+        (download.scarica riusa 'scaricato.*'). La prima lezione la fa il principale.
+        Errori ignorati: riemergono, con il messaggio giusto, quando tocca alla lezione."""
+        from . import download
+        for j, job in enumerate(self._jobs):
+            if j == 0 or self._ferma():
+                continue
+            url = getattr(job, "url", None)
+            if not url or not download.e_webex_diretto(url):
+                continue
+            wd = cartella_lavoro(self._work_base, job.nome, identita_job(job))
+            if self._gia_trascritta(wd):
+                continue
+            try:
+                download.scarica(url, wd, job.cookies, job.password, _ReporterSilente(self._ferma))
+            except Exception:
+                pass
+
+    def _gia_trascritta(self, wd: Path) -> bool:
+        """Grezza valida in cache: lo Stadio 1 la riusa senza audio, inutile scaricare."""
+        grezza = wd / "grezza.txt"
+        if self._rifai or not grezza.exists():
+            return False
+        try:
+            return config.MARCATORE_ERRORE not in grezza.read_text(encoding="utf-8")
+        except Exception:
+            return False
+
     def _run(self) -> None:
+        self._scarica_subito_link_diretti()
         for j, job in enumerate(self._jobs):
             self._sem.acquire()
             try:

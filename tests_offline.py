@@ -816,5 +816,46 @@ finally:
     transcribe.con_retry, transcribe._carica_file, transcribe._genera = _old_retry, _old_carica, _old_gen
     transcribe._trascrivi_con_guardia, transcribe.audio.durata = _old_guardia, _old_durata
 
+print("\n#  Webex: link DIRETTO (hls.m3u8) senza cookie")
+import base64 as _b64
+from trascrittore import coda as _coda
+from trascrittore.pipeline import Job as _Job, identita_job as _ident
+def _link_diretto(rec, ticket):
+    q = f"siteid=14522422&recordid={rec}&from=MBS&ticket={ticket}&timestamp=1794428330352&siteurl=x.webex.com"
+    blob = _b64.b64encode(q.encode()).decode().rstrip("=")
+    return f"https://nfg1wss.webex.com/nbr/MultiThreadDownloadServlet/{blob}/hls.m3u8?trackingID=AB_1"
+_d1, _d2 = _link_diretto(442948667, "AAA"), _link_diretto(442948667, "BBB")
+_d3 = _link_diretto(999, "AAA")
+_pag = "https://politecnicomilano.webex.com/recordingservice/sites/politecnicomilano/recording/abc/playback"
+check("link diretto riconosciuto", download.e_webex_diretto(_d1))
+check("link diretto: e' anche Webex", download.e_webex(_d1))
+check("pagina della registrazione: NON diretto (servono i cookie)", not download.e_webex_diretto(_pag))
+check("YouTube: non diretto", not download.e_webex_diretto("https://www.youtube.com/watch?v=x"))
+check("m3u8 non Webex: non diretto", not download.e_webex_diretto("https://esempio.it/video/hls.m3u8"))
+check("numero registrazione letto dal link", download.id_registrazione_webex(_d1) == "14522422:442948667")
+check("nome stabile 'Webex <numero>'", download.nome_webex_diretto(_d1) == "Webex 442948667")
+_storpiato = "https://x.webex.com/nbr/MultiThreadDownloadServlet/zz/hls.m3u8"
+check("link senza numero di registrazione: niente identita' speciale, nome 'Webex'",
+      download.id_registrazione_webex(_storpiato) is None
+      and download.nome_webex_diretto(_storpiato) == "Webex"
+      and _ident(_Job(url=_storpiato)) == _storpiato)
+check("ricopiato (ticket diverso) -> STESSA identita' (cache riusata)",
+      _ident(_Job(url=_d1)) == _ident(_Job(url=_d2)) != _d1)
+check("altra registrazione -> identita' diversa", _ident(_Job(url=_d1)) != _ident(_Job(url=_d3)))
+check("link normale: identita' = url (come prima)", _ident(_Job(url=_pag)) == _pag)
+
+# Prefetcher: i link diretti si scaricano SUBITO all'avvio, non quando tocca a loro
+_old_scarica = download.scarica
+_scaricati = []
+download.scarica = lambda url, wd, c, p, rep, avanzamento=None: _scaricati.append(url)
+try:
+    _jobs = [_Job(url=_d3, nome="Webex 999"), _Job(sorgente=Path("x.mp4"), nome="file"),
+             _Job(url=_pag, nome="pagina"), _Job(url=_d1, nome="Webex 442948667")]
+    _pf = _coda.Prefetcher(_jobs, Path(_tf.mkdtemp()), buffer=1, prepara=lambda job: None)
+    _pf._scarica_subito_link_diretti()
+    check("coda: link diretti scaricati subito (non il primo: lo fa il principale)", _scaricati == [_d1])
+finally:
+    download.scarica = _old_scarica
+
 print(f"\n==== RISULTATO: {ok} PASS, {ko} FAIL ====")
 raise SystemExit(1 if ko else 0)

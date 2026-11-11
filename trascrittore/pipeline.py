@@ -41,6 +41,13 @@ def identita_job(job: "Job") -> str:
     if job.sorgente is not None:
         return str(job.sorgente)
     if job.url:
+        # Link diretto Webex (hls.m3u8): ogni copia ha ticket/token diversi e scade.
+        # L'identita' e' la REGISTRAZIONE, non il link: ricopiando un link fresco della
+        # stessa lezione si riusa la cache (niente nuovo download ne' trascrizione).
+        from .download import id_registrazione_webex
+        reg = id_registrazione_webex(job.url)
+        if reg:
+            return f"webex-registrazione:{reg}"
         return job.url
     return job.nome or "lezione"
 
