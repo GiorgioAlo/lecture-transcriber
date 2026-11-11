@@ -764,14 +764,21 @@ try:
             chiamate.append(model)
             return risposte[len(chiamate) - 1]
         return gen, chiamate
-    _g, _ch = _seq([("", "STOP")] * config.ASR_MAX_TENTATIVI)
+    _g, _ch = _seq([("", "STOP")] * (config.ASR_MAX_TENTATIVI + 1))
     transcribe._genera = _g
     _rp = _RepP()
     _res = transcribe._trascrivi_con_guardia(_CliDel(), Path("x.m4a"), 600, "audio 10/15", _rp)
-    check("vuoto a ogni tentativo -> pezzo saltato (testo vuoto)", _res == ("", config.ASR_MODEL))
-    check("...dopo TUTTI i tentativi flash-lite, senza fallback",
-          _ch == [config.ASR_MODEL] * config.ASR_MAX_TENTATIVI)
-    check("...e il registro lo dice (pausa)", any("nessun parlato" in r for r in _rp.righe))
+    check("vuoto a ogni tentativo + conferma vuota -> pezzo saltato (testo vuoto)", _res[0] == "")
+    check("...dopo TUTTI i tentativi flash-lite + UNA conferma col trascrittore dedicato",
+          _ch == [config.ASR_MODEL] * config.ASR_MAX_TENTATIVI + [config.TRANSCRIBE_MODEL])
+    check("...e il registro lo dice (pausa)", any("nessun parlato in questo pezzo" in r for r in _rp.righe))
+    _g, _ch = _seq([("", "STOP")] * config.ASR_MAX_TENTATIVI + [("Qui invece si parla eccome.", "STOP")])
+    transcribe._genera = _g
+    _rp = _RepP()
+    _res = transcribe._trascrivi_con_guardia(_CliDel(), Path("x.m4a"), 600, "t", _rp)
+    check("flash-lite vuoto ma il dedicato sente parlato -> si tiene il testo (niente pezzo perso)",
+          _res == ("Qui invece si parla eccome.", config.TRANSCRIBE_MODEL)
+          and not any("nessun parlato in questo pezzo" in r for r in _rp.righe))
     _g, _ch = _seq([("", "STOP"), ("Buongiorno a tutti, oggi parliamo di ossigenazione.", "STOP")])
     transcribe._genera = _g
     check("vuoto per caso poi testo -> si tiene il testo (vuoto temporaneo recuperato)",
@@ -856,6 +863,25 @@ try:
     check("coda: link diretti scaricati subito (non il primo: lo fa il principale)", _scaricati == [_d1])
 finally:
     download.scarica = _old_scarica
+
+# link diretto che fallisce (scaduto): subito il messaggio, NIENTE aggiornamento di yt-dlp
+_old_esegui, _old_agg = download._esegui_download, download.aggiorna_ytdlp
+_agg = []
+def _esegui_ko(url, *a, **k):
+    raise download.DownloadFallito("ko")
+download._esegui_download = _esegui_ko
+download.aggiorna_ytdlp = lambda rep=None, timeout=120: _agg.append(1) or False
+try:
+    for _u, _atteso, _descr in ((_d1, [], "link diretto scaduto -> niente aggiornamento di yt-dlp"),
+                                (_pag, [1], "link normale fallito -> prova ad aggiornare yt-dlp (come prima)")):
+        _agg.clear()
+        try:
+            download.scarica(_u, Path(_tf.mkdtemp()), None, None, _RepP())
+        except download.DownloadFallito:
+            pass
+        check(_descr, _agg == _atteso)
+finally:
+    download._esegui_download, download.aggiorna_ytdlp = _old_esegui, _old_agg
 
 print(f"\n==== RISULTATO: {ok} PASS, {ko} FAIL ====")
 raise SystemExit(1 if ko else 0)

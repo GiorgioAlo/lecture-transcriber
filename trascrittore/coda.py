@@ -85,7 +85,7 @@ class Prefetcher:
         )
 
     def _scarica_subito_link_diretti(self) -> None:
-        """I link DIRETTI di Webex (hls.m3u8) SCADONO: non possono aspettare il loro
+        """I link DIRETTI di Webex (hls.m3u8) SCADONO (dopo piu' di 1 ora, misurato): non possono aspettare il loro
         turno nel buffer (la 5a lezione partirebbe dopo decine di minuti). Li scarico
         tutti SUBITO, all'avvio della coda (~30 s l'uno, nessuna API); l'estrazione e
         la segmentazione restano al giro normale, che trova il file e lo riusa

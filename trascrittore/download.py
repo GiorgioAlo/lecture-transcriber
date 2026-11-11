@@ -67,8 +67,9 @@ def e_webex(url: str) -> bool:
 def e_webex_diretto(url: str) -> bool:
     """Link DIRETTO al flusso di una registrazione Webex (il `hls.m3u8` che il lettore
     scarica; si copia dal browser con F12 → Rete → "m3u8"). Il permesso e' scritto
-    DENTRO il link (ticket + token), quindi NON servono i cookie; pero' SCADE (ore?
-    misura in STATO.md) e porta l'identita' di chi l'ha copiato.
+    DENTRO il link (ticket + token), quindi NON servono i cookie; pero' SCADE (misurato
+    2026-11-11: valido ancora dopo 1 ora; uno di 7 giorni prima → 403) e porta
+    l'identita' di chi l'ha copiato. Funziona anche da un'altra rete (provato da Colab).
     Forma: https://<x>.webex.com/nbr/MultiThreadDownloadServlet/<base64>/hls.m3u8?..."""
     if not e_webex(url):
         return False
@@ -254,6 +255,10 @@ def scarica(
         # Un fallimento e' spesso yt-dlp vecchio (il sito e' cambiato): provo ad
         # AGGIORNARLO e riprovo UNA volta. Se non e' il binario (o l'update non va),
         # rilancio l'errore originale. L'annullo (Interrotto) NON entra qui.
+        # Link diretto Webex: e' un HLS generico, se fallisce e' il LINK (scaduto),
+        # non yt-dlp → niente aggiornamento ne' secondo tentativo, subito il messaggio.
+        if e_webex_diretto(url):
+            raise
         if aggiorna_ytdlp(reporter):
             reporter.log("Riprovo con yt-dlp aggiornato…")
             return _esegui_download(url, work_dir, cookies, password, reporter, avanzamento)

@@ -58,10 +58,20 @@ Prova veloce: apri l'exe → **Impostazioni** → "Versione app" deve mostrare i
 > NON modificare le Release vecchie: ogni versione è una Release nuova con tag nuovo.
 > GitHub rinomina l'asset in `Trascrivi.Lezioni.exe` (punti al posto degli spazi): è normale.
 
-## 5. Verifica finale
+## 5. Il .dmg per Mac arriva da solo
+
+Appena la Release è **pubblicata**, GitHub fa partire il workflow **build-macos**
+(tab "Actions"): costruisce il `.dmg` su un Mac di GitHub e lo **allega da solo** alla
+stessa Release (`Trascrivi-Lezioni-macOS.dmg`). Ci mette ~10 minuti. Non serve fare nulla:
+basta controllare che finisca con la ✓ verde.
+
+> Se fallisce o va rifatto: tab Actions → **build-macos** → *Run workflow* → scrivi il tag
+> (es. `v1.3.0`): ricostruisce il `.dmg` e lo sostituisce nella Release.
+
+## 6. Verifica finale
 
 - La nuova Release risulta **Latest**, non *Draft* né *Pre-release*.
-- Ha **un solo** asset `.exe`, ~134 MB.
+- Ha **due** asset: il `.exe` (~134 MB) e, dopo ~10 minuti, il `.dmg`.
 - (Opzionale) chi ha una versione precedente, riaprendo l'app, vede il banner entro
   qualche secondo (il controllo è max 1 volta al giorno per PC).
 

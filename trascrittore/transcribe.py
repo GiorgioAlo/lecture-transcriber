@@ -13,7 +13,10 @@ flash-lite e' pero' un ASR stocastico: su qualche blocco puo' andare in RUNAWAY
   4. se runaway → ritenta (i fallimenti sono stocastici); tiene il tentativo piu'
      lungo non-runaway;
   5. se TUTTI i tentativi sono runaway → ripiega su `config.TRANSCRIBE_MODEL`
-     (trascrittore dedicato affidabile) con collasso delle ripetizioni.
+     (trascrittore dedicato affidabile) con collasso delle ripetizioni;
+  6. se tornano VUOTI (risposta completa, zero testo: nessuno parla, es. la pausa a
+     registrazione accesa) → conferma con `config.TRANSCRIBE_MODEL`: se e' vuoto
+     anche lui il pezzo si salta, altrimenti si tiene il suo testo.
 
 Ogni blocco trascritto viene salvato in cache: ripartendo si riusano i blocchi
 gia fatti. Il testo torna nella LINGUA PARLATA (nessuna traduzione qui).
@@ -321,7 +324,8 @@ def _trascrivi_con_guardia(client, chunk_path: Path, durata_sec: float,
     Fino a ASR_MAX_TENTATIVI tentativi con flash-lite: scarta i RUNAWAY (ritenta),
     tiene il tentativo piu' LUNGO non-runaway (recupera i troncamenti; un blocco
     genuinamente rado resta corto su tutti i tentativi → si accetta il migliore).
-    Se TUTTI i tentativi sono runaway → fallback su TRANSCRIBE_MODEL."""
+    Se TUTTI i tentativi sono runaway o vuoti → fallback su TRANSCRIBE_MODEL; se anche
+    lui torna vuoto, nel pezzo non parla nessuno (pausa) e si salta (testo "")."""
     cap = max(3072, int(durata_sec / 60.0 * config.ASR_CAP_WPM * 1.4))
     cfg_flash = {
         "max_output_tokens": cap,
@@ -338,7 +342,8 @@ def _trascrivi_con_guardia(client, chunk_path: Path, durata_sec: float,
             testo = _pulisci_artefatti(testo)
             if not testo:
                 # Risposta completa ma vuota: forse nessuno parla. Riprovo comunque
-                # (un vuoto per caso si ripresenta di rado): decide l'ultimo tentativo.
+                # (un vuoto per caso si ripresenta di rado); se resta vuoto, conferma
+                # col trascrittore dedicato (sotto) prima di saltare il pezzo.
                 vuoti += 1
                 continue
             d = _diagnosi(testo, finish, durata_sec)
@@ -351,19 +356,27 @@ def _trascrivi_con_guardia(client, chunk_path: Path, durata_sec: float,
                 break
         if tentativi_ok:
             return max(tentativi_ok, key=lambda s: len(s.split())), config.ASR_MODEL
-        if vuoti == config.ASR_MAX_TENTATIVI:
-            # Vuoto a OGNI tentativo: nel blocco non parla nessuno (es. la pausa a
-            # meta' lezione con la registrazione accesa). Niente testo, niente errore.
-            reporter.log(f"⏸️  [{descrizione}] nessun parlato in questo pezzo (pausa?): lo salto")
-            return "", config.ASR_MODEL
 
-        # tutti runaway (o runaway + vuoti) → fallback sul trascrittore dedicato
-        reporter.log(f"↩️  [{descrizione}] uso {config.TRANSCRIBE_MODEL} (fallback)")
+        # Tutti runaway, o vuoti (forse nessuno parla) → trascrittore dedicato. Per i
+        # vuoti fa da CONFERMA: un pezzo si salta solo se ANCHE lui non sente parlato
+        # (sulla pausa vera del 2026-11-11 rispondeva vuoto anche lui), cosi' un vuoto
+        # per caso di flash-lite non fa sparire 10 minuti di lezione. 1 richiesta in
+        # piu', solo sui pezzi vuoti.
+        if vuoti == config.ASR_MAX_TENTATIVI:
+            reporter.log(f"🔎 [{descrizione}] nessun parlato per {config.ASR_MODEL}: "
+                         f"controllo con {config.TRANSCRIBE_MODEL}")
+        else:
+            reporter.log(f"↩️  [{descrizione}] uso {config.TRANSCRIBE_MODEL} (fallback)")
         testo, _fin = _genera(client, config.TRANSCRIBE_MODEL, f, {}, reporter,
                               descrizione + " (fallback)")
         if _sospetto_loop(testo, durata_sec):
             testo = _collassa_ripetizioni(testo)
-        return _pulisci_artefatti(testo), config.TRANSCRIBE_MODEL
+        testo = _pulisci_artefatti(testo)
+        if not testo:
+            # Vuoto anche per il trascrittore dedicato: nel blocco non parla nessuno
+            # (es. la pausa a meta' lezione con la registrazione accesa). Si salta.
+            reporter.log(f"⏸️  [{descrizione}] nessun parlato in questo pezzo (pausa?): lo salto")
+        return testo, config.TRANSCRIBE_MODEL
     finally:
         try:
             client.files.delete(name=f.name)   # non lasciare file sull'account
