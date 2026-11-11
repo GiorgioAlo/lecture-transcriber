@@ -61,6 +61,12 @@ class ContenutoBloccato(ErrorePipeline):
     torna senza candidati. Distinta dalle altre per dare un messaggio chiaro."""
 
 
+class NessunParlato(ErrorePipeline):
+    """In TUTTA la registrazione Gemini non ha trovato parlato (ogni blocco audio e'
+    tornato vuoto: video senza voce, audio sbagliato...). Una pausa a meta' lezione
+    NON la solleva: i blocchi vuoti si saltano, basta che qualcuno parli altrove."""
+
+
 class ModelloNonDisponibile(ErrorePipeline):
     """Google ha RITIRATO (o reso inaccessibile) un modello Gemini che l'app usa.
     Sollevata SOLO quando il ritiro e' CERTO: l'API risponde 404 NOT_FOUND citando

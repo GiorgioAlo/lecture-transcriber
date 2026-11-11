@@ -1026,6 +1026,7 @@ class Api:
         titoli = {
             "DownloadFallito": "py.err.dl.t",
             "ContenutoBloccato": "py.err.blocked.t",
+            "NessunParlato": "py.err.nospeech.t",
             "FfmpegMancante": "py.err.cannot.t",
         }
         if kind == "ModelloNonDisponibile":

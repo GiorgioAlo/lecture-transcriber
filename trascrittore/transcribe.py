@@ -31,7 +31,7 @@ from pathlib import Path
 from google.genai import types
 
 from . import audio, config, tempi, util
-from .errors import ContenutoBloccato, Interrotto, Messaggio
+from .errors import ContenutoBloccato, Interrotto, Messaggio, NessunParlato
 from .gemini import IMPOSTAZIONI_SICUREZZA, con_retry
 from .progress import Reporter
 
@@ -146,6 +146,15 @@ def _motivo_blocco(risposta) -> str | None:
         if fr in _FINISH_BLOCCO:
             return fr
     return None
+
+
+def _finish(risposta) -> str:
+    """finish_reason del primo candidato come nome nudo ("STOP", "MAX_TOKENS"...),
+    "" se non c'e' nessun candidato."""
+    cand = getattr(risposta, "candidates", None) or []
+    if not cand:
+        return ""
+    return str(getattr(cand[0], "finish_reason", "") or "").split(".")[-1]
 
 
 def _estrai_transcript(risposta) -> str:
@@ -283,16 +292,23 @@ def _genera(client, model: str, file_obj, extra: dict, reporter: Reporter, descr
             risposta = chiama(opzioni)
         testo = _estrai_transcript(risposta)
         if not testo:
-            # Niente testo: o Gemini ha RIFIUTATO (safety/copyright) -> errore chiaro
-            # SUBITO (con_retry non lo ritenta), oppure e' un vuoto transitorio ->
-            # RuntimeError, che con_retry ritenta.
+            # Niente testo: tre casi.
+            # 1) Gemini ha RIFIUTATO (safety/copyright) -> errore chiaro SUBITO
+            #    (con_retry non lo ritenta).
+            # 2) Risposta COMPLETA (finish STOP) ma vuota: nel blocco nessuno parla
+            #    (pausa in cui la registrazione continua; misurato 2026-11-11 su una
+            #    pausa di 10 min: flash-lite e transcribe rispondono entrambi cosi').
+            #    NON e' un errore: torna "" e decide la guardia (la riprova piu' volte).
+            # 3) Vuoto senza risposta vera (nessun candidato, finish strano) -> vuoto
+            #    transitorio: RuntimeError, che con_retry ritenta come prima.
             motivo = _motivo_blocco(risposta)
             if motivo:
                 reporter.log(f"⛔ [{descr}] Gemini ha BLOCCATO il contenuto — motivo: {motivo}")
                 raise ContenutoBloccato(_messaggio_blocco(motivo))
+            if _finish(risposta) == "STOP":
+                return "", "STOP"
             raise RuntimeError("trascrizione vuota")
-        finish = str(getattr(risposta.candidates[0], "finish_reason", "")).split(".")[-1]
-        return testo, finish
+        return testo, _finish(risposta)
 
     return con_retry(azione, descr, reporter.log, interrotto=reporter.interrotto,
                      client=client, modello=model)
@@ -314,11 +330,17 @@ def _trascrivi_con_guardia(client, chunk_path: Path, durata_sec: float,
     f = _carica_file(client, chunk_path, reporter)
     try:
         tentativi_ok: list[str] = []
+        vuoti = 0
         for t in range(1, config.ASR_MAX_TENTATIVI + 1):
             if reporter.interrotto():
                 raise Interrotto()
             testo, finish = _genera(client, config.ASR_MODEL, f, cfg_flash, reporter, descrizione)
             testo = _pulisci_artefatti(testo)
+            if not testo:
+                # Risposta completa ma vuota: forse nessuno parla. Riprovo comunque
+                # (un vuoto per caso si ripresenta di rado): decide l'ultimo tentativo.
+                vuoti += 1
+                continue
             d = _diagnosi(testo, finish, durata_sec)
             if d == "RUNAWAY":
                 reporter.log(f"⚠️  [{descrizione}] blocco sospetto (runaway), ritento "
@@ -329,11 +351,16 @@ def _trascrivi_con_guardia(client, chunk_path: Path, durata_sec: float,
                 break
         if tentativi_ok:
             return max(tentativi_ok, key=lambda s: len(s.split())), config.ASR_MODEL
+        if vuoti == config.ASR_MAX_TENTATIVI:
+            # Vuoto a OGNI tentativo: nel blocco non parla nessuno (es. la pausa a
+            # meta' lezione con la registrazione accesa). Niente testo, niente errore.
+            reporter.log(f"⏸️  [{descrizione}] nessun parlato in questo pezzo (pausa?): lo salto")
+            return "", config.ASR_MODEL
 
-        # tutti runaway → fallback sul trascrittore dedicato
+        # tutti runaway (o runaway + vuoti) → fallback sul trascrittore dedicato
         reporter.log(f"↩️  [{descrizione}] uso {config.TRANSCRIBE_MODEL} (fallback)")
-        testo, _finish = _genera(client, config.TRANSCRIBE_MODEL, f, {}, reporter,
-                                 descrizione + " (fallback)")
+        testo, _fin = _genera(client, config.TRANSCRIBE_MODEL, f, {}, reporter,
+                              descrizione + " (fallback)")
         if _sospetto_loop(testo, durata_sec):
             testo = _collassa_ripetizioni(testo)
         return _pulisci_artefatti(testo), config.TRANSCRIBE_MODEL
@@ -499,6 +526,12 @@ def trascrivi_chunks(
         # finiscono in background (la cache atomica rende innocuo il loro arrivo).
         ex.shutdown(wait=False, cancel_futures=True)
 
+    if not any(parti.values()):
+        # Nessun pezzo ha parlato: proseguire darebbe documenti vuoti (o errori strani
+        # nella pulizia). Si ferma con un messaggio chiaro; i pezzi vuoti restano in
+        # cache, quindi un «Riprova» non rispende richieste.
+        raise NessunParlato(Messaggio("Non ho trovato parlato in questa registrazione.",
+                                      "py.err.nospeech.d"))
     # Mappa durata/testo di ogni pezzo: serve ai segni "⏱ ~10 min" nei documenti
     tempi.salva(work_dir, [durate[i] for i in range(n)], [parti.get(i, "") for i in range(n)])
     return "\n".join(parti[i] for i in sorted(parti) if parti[i])

@@ -16,6 +16,9 @@
 - La versione da riga di comando si installa anche con Python 3.11 (prima serviva il 3.12).
 - Segni del tempo nei documenti ("⏱ ~10 min", "⏱ ~20 min", … "⏱ ~1 h 10 min") per ritrovare
   più o meno un punto della lezione nel video. Sono approssimati: servono per orientarsi.
+- Risolto: una lezione con una pausa lunga (circa 10 minuti in cui nessuno parla ma la registrazione
+  continua) finiva in errore. Ora la pausa viene semplicemente saltata. Se invece in tutta la
+  registrazione non parla nessuno, l'app si ferma con un messaggio chiaro.
 
 ## 1.2.1
 - Risolto un problema per cui l'avviso di nuova versione poteva non comparire.

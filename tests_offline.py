@@ -711,5 +711,110 @@ check("txt: riga del segno separata dal testo", "\n\n⏱ ~1 h 10 min\n\n" in _tx
 check("md: segno in corsivo con la tilde neutralizzata",
       "\n\n*⏱ \\~1 h 10 min*\n\n" in _cr[2].read_text(encoding="utf-8"))
 
+print("\n#  pausa a meta' lezione: blocco senza parlato (vuoto) != errore")
+import tempfile as _tf
+from trascrittore.errors import NessunParlato
+_old_retry, _old_carica, _old_gen = transcribe.con_retry, transcribe._carica_file, transcribe._genera
+_old_guardia, _old_durata = transcribe._trascrivi_con_guardia, transcribe.audio.durata
+class _CliRisp:
+    """Client finto: generate_content torna sempre la risposta data."""
+    def __init__(self, risp):
+        self.n = 0
+        cli = self
+        class models:
+            @staticmethod
+            def generate_content(model, contents, config):
+                cli.n += 1
+                return risp
+        self.models = models
+class _CliDel:
+    class files:
+        @staticmethod
+        def delete(name=None): pass
+class _RepP:
+    def __init__(self): self.righe = []
+    def log(self, m): self.righe.append(m)
+    def interrotto(self): return False
+    def richiesta_trascrizione(self): pass
+try:
+    # _genera: con_retry ridotto a UNA chiamata (cosi' un errore esce subito, senza attese)
+    transcribe.con_retry = lambda azione, *a, **k: azione()
+    _muta = _FintaRisposta(candidates=[_FintoCandidato(parts=[], finish_reason="STOP")])
+    _cm = _CliRisp(_muta)
+    check("vuoto + STOP (pausa) -> testo vuoto, NON errore",
+          transcribe._genera(_cm, "m", None, {}, _RepP(), "t") == ("", "STOP") and _cm.n == 1)
+    _cm2 = _CliRisp(_FintaRisposta(candidates=[_FintoCandidato(parts=[], finish_reason="FinishReason.STOP")]))
+    check("vuoto + FinishReason.STOP (enum vero) -> testo vuoto",
+          transcribe._genera(_cm2, "m", None, {}, _RepP(), "t") == ("", "STOP"))
+    for _nome, _r in (("nessun candidato", _FintaRisposta(candidates=[])),
+                      ("finish MAX_TOKENS", _FintaRisposta(candidates=[_FintoCandidato(parts=[], finish_reason="MAX_TOKENS")])),
+                      ("finish OTHER", _FintaRisposta(candidates=[_FintoCandidato(parts=[], finish_reason="OTHER")]))):
+        try:
+            transcribe._genera(_CliRisp(_r), "m", None, {}, _RepP(), "t")
+            check(f"vuoto con {_nome} -> resta errore ritentabile", False)
+        except RuntimeError:
+            check(f"vuoto con {_nome} -> resta errore ritentabile", True)
+    transcribe.con_retry = _old_retry
+
+    # guardia: risposte in sequenza
+    transcribe._carica_file = lambda c, p, r: type("F", (), {"name": "files/x"})()
+    def _seq(risposte):
+        chiamate = []
+        def gen(client, model, f, extra, rep, descr):
+            chiamate.append(model)
+            return risposte[len(chiamate) - 1]
+        return gen, chiamate
+    _g, _ch = _seq([("", "STOP")] * config.ASR_MAX_TENTATIVI)
+    transcribe._genera = _g
+    _rp = _RepP()
+    _res = transcribe._trascrivi_con_guardia(_CliDel(), Path("x.m4a"), 600, "audio 10/15", _rp)
+    check("vuoto a ogni tentativo -> pezzo saltato (testo vuoto)", _res == ("", config.ASR_MODEL))
+    check("...dopo TUTTI i tentativi flash-lite, senza fallback",
+          _ch == [config.ASR_MODEL] * config.ASR_MAX_TENTATIVI)
+    check("...e il registro lo dice (pausa)", any("nessun parlato" in r for r in _rp.righe))
+    _g, _ch = _seq([("", "STOP"), ("Buongiorno a tutti, oggi parliamo di ossigenazione.", "STOP")])
+    transcribe._genera = _g
+    check("vuoto per caso poi testo -> si tiene il testo (vuoto temporaneo recuperato)",
+          transcribe._trascrivi_con_guardia(_CliDel(), Path("x.m4a"), 60, "t", _RepP())[0].startswith("Buongiorno")
+          and len(_ch) == 2)
+    _g, _ch = _seq([("x", "MAX_TOKENS"), ("", "STOP"), ("", "STOP"), ("", "STOP")])
+    transcribe._genera = _g
+    _res = transcribe._trascrivi_con_guardia(_CliDel(), Path("x.m4a"), 600, "t", _RepP())
+    check("runaway + vuoti -> decide il fallback (che puo' tornare vuoto)",
+          _ch[-1] == config.TRANSCRIBE_MODEL and _res == ("", config.TRANSCRIBE_MODEL))
+    transcribe._genera = _old_gen
+
+    # trascrivi_chunks: pezzo vuoto in mezzo / tutti vuoti / ripresa dalla cache
+    transcribe.audio.durata = lambda p: 600.0
+    _testi = {"part_000.m4a": "Prima della pausa.", "part_001.m4a": "", "part_002.m4a": "Dopo la pausa."}
+    _chiamati = []
+    def _guardia_finta(client, c, dur, descr, rep):
+        _chiamati.append(c.name)
+        return _testi[c.name], config.ASR_MODEL
+    transcribe._trascrivi_con_guardia = _guardia_finta
+    _wd = Path(_tf.mkdtemp())
+    (_wd / "chunks_audio").mkdir()
+    _chunks = [_wd / "chunks_audio" / n for n in _testi]
+    _raw = transcribe.trascrivi_chunks(None, _chunks, _wd, _RepP())
+    check("pezzo muto in mezzo: la lezione va avanti e il testo e' unito senza buchi",
+          _raw == "Prima della pausa.\nDopo la pausa.")
+    check("pezzo muto salvato in cache (vuoto)",
+          (_wd / "chunks_audio" / "part_002.txt").read_text(encoding="utf-8") == "")
+    check("segni del tempo: tempi.json scritto anche col pezzo muto", (_wd / "tempi.json").exists())
+    _chiamati.clear()
+    check("ripresa: il pezzo muto in cache si riusa (nessuna richiesta)",
+          transcribe.trascrivi_chunks(None, _chunks, _wd, _RepP()) == _raw and _chiamati == [])
+    _testi = {k: "" for k in _testi}
+    _wd2 = Path(_tf.mkdtemp())
+    (_wd2 / "chunks_audio").mkdir()
+    try:
+        transcribe.trascrivi_chunks(None, [_wd2 / "chunks_audio" / n for n in _testi], _wd2, _RepP())
+        check("nessun parlato in tutta la registrazione -> NessunParlato", False)
+    except NessunParlato as _e:
+        check("nessun parlato in tutta la registrazione -> NessunParlato", _e.codice == "py.err.nospeech.d")
+finally:
+    transcribe.con_retry, transcribe._carica_file, transcribe._genera = _old_retry, _old_carica, _old_gen
+    transcribe._trascrivi_con_guardia, transcribe.audio.durata = _old_guardia, _old_durata
+
 print(f"\n==== RISULTATO: {ok} PASS, {ko} FAIL ====")
 raise SystemExit(1 if ko else 0)
