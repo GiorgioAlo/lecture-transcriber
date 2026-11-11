@@ -7,10 +7,12 @@ name: Build macOS
 #  - a mano, dal tab "Actions" -> "Build macOS" -> "Run workflow" (serve per le prove);
 #  - da sola, quando pubblichi una Release (allega il .dmg alla stessa Release).
 #
-# Strategia: build arm64 (runner Apple Silicon macos-14). Copre i Mac recenti (2020+).
-# NB: macos-13 (Intel) scartato perche' a meta' 2025 i suoi runner spesso non
-# prendono i job (restano in coda per ore). I Mac Intel vecchi non sono coperti per
-# ora (in futuro, eventuale build "universal2").
+# Strategia: build arm64 (runner Apple Silicon macos-15). Copre i Mac Apple Silicon.
+# NB: macos-14 RITIRATO da GitHub (nov 2026: "The configuration 'macos-14-arm64-us-default'
+# is not supported"). ffmpeg viene da Homebrew, compilato per il macOS del runner: la
+# versione MINIMA di macOS del .dmg la stampa lo step di diagnostica (riga "minos").
+# macos-13 (Intel) scartato: a meta' 2025 i suoi runner spesso non prendevano i job.
+# I Mac Intel vecchi non sono coperti (in futuro, eventuale build "universal2").
 
 on:
   workflow_dispatch:
@@ -26,7 +28,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-14    # runner Apple Silicon (arm64); affidabile nel prendere i job
+    runs-on: macos-15    # runner Apple Silicon (arm64); macos-14 e' stato ritirato da GitHub
     steps:
       - name: Checkout del codice
         uses: actions/checkout@v4
@@ -93,6 +95,12 @@ jobs:
           BIN="$APP/Contents/MacOS/Trascrivi Lezioni"
           echo "===== macOS del runner ====="; sw_vers
           echo "===== Architettura dell'eseguibile (atteso: arm64) ====="; file "$BIN"; lipo -archs "$BIN"
+          echo "===== macOS MINIMO richiesto (minos): app e ffmpeg/ffprobe ====="
+          for B in "$BIN" packaging/bin-macos/ffmpeg packaging/bin-macos/ffprobe; do
+            echo "--- $B"; otool -l "$B" | grep -A4 LC_BUILD_VERSION | grep -E "minos|sdk"
+          done
+          echo "--- librerie .dylib dentro l'app (la piu' esigente decide):"
+          find "$APP" -name "*.dylib" -exec sh -c 'otool -l "$1" | grep -A4 LC_BUILD_VERSION | grep minos' _ {} \; | sort | uniq -c
           echo "===== codesign: dettagli della firma ====="; codesign -dvvv "$APP"
           echo "===== codesign: verifica profonda ====="; codesign --verify --deep --strict --verbose=4 "$APP"
           echo "===== Gatekeeper: stato del sistema ====="; spctl --status
