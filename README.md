@@ -21,6 +21,10 @@ On that page scroll down to **“Assets”** and download the file for your comp
    **More info → Run anyway**.
 
 ### 🍎 Mac (Apple Silicon — M1/M2/M3/M4…)
+Requires **macOS 15 (Sequoia) or newer** (check it in the Apple menu → *About This Mac*).
+On an older macOS the app may open but can't extract the audio: update macOS, or use the
+**Google Colab** version below (works in the browser on any computer).
+
 1. Download **`Trascrivi-Lezioni-macOS.dmg`** from the Assets list.
 2. Open the `.dmg` and **drag the app into the Applications folder** (don't run it straight
    from the mounted disk image).
