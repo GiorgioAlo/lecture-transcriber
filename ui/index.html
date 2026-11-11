@@ -381,7 +381,7 @@ try{var _th=localStorage.getItem('ui_theme');if(_th==='dark')document.documentEl
               <li>Apri la <b>registrazione</b> Webex nel browser (Chrome o Edge) e <b>accedi</b>.</li>
               <li>Premi <b>F12</b> e scegli la scheda <b>Rete</b> (Network).</li>
               <li>Fai partire il video e nella casella <b>Filtro</b> scrivi <b>m3u8</b>.</li>
-              <li>Sulla riga <b>hls.m3u8</b>: tasto destro → <b>Copia</b> → <b>Copia URL</b>.</li>
+              <li>Sulla riga <b>hls.m3u8</b>: tasto destro → <b>Copia</b> → <b>Copia URL</b> (se ne vedi due, una è il «preflight»: hanno lo stesso link, va bene una qualsiasi).</li>
               <li>Incollalo qui sopra e premi <b>Aggiungi</b>: non servono i cookie. Il link <b>scade</b>: avvia subito.</li>
             </ol>
           </div>
@@ -539,6 +539,7 @@ try{var _th=localStorage.getItem('ui_theme');if(_th==='dark')document.documentEl
       </div>
       <div class="set-tools">
         <button class="btn ghost" id="btn-segnala" hidden onclick="segnalaProblema()" data-i18n="set.report">Segnala un problema</button>
+        <button class="btn ghost" id="btn-dona" hidden onclick="faiDonazione()" data-i18n="set.donate">☕ Fai una donazione</button>
         <button class="btn ghost" id="btn-updates" onclick="cercaAggiornamenti(this)" data-i18n="set.updates">Cerca aggiornamenti</button>
       </div>
     </div>
@@ -563,7 +564,7 @@ var I18N = {
     'link.hint':'Webex, YouTube e altri siti. Scarichiamo solo l\'audio.',
     'link.direct':'Link diretto di Webex: non servono i cookie. Scade presto: avvia la trascrizione subito e non passarlo ad altri (contiene il tuo accesso).',
     'webex.guide2h':'Senza estensione: copia il link diretto',
-    'webex.steps2':'<li>Apri la <b>registrazione</b> Webex nel browser (Chrome o Edge) e <b>accedi</b>.</li><li>Premi <b>F12</b> e scegli la scheda <b>Rete</b> (Network).</li><li>Fai partire il video e nella casella <b>Filtro</b> scrivi <b>m3u8</b>.</li><li>Sulla riga <b>hls.m3u8</b>: tasto destro → <b>Copia</b> → <b>Copia URL</b>.</li><li>Incollalo qui sopra e premi <b>Aggiungi</b>: non servono i cookie. Il link <b>scade</b>: avvia subito.</li>',
+    'webex.steps2':'<li>Apri la <b>registrazione</b> Webex nel browser (Chrome o Edge) e <b>accedi</b>.</li><li>Premi <b>F12</b> e scegli la scheda <b>Rete</b> (Network).</li><li>Fai partire il video e nella casella <b>Filtro</b> scrivi <b>m3u8</b>.</li><li>Sulla riga <b>hls.m3u8</b>: tasto destro → <b>Copia</b> → <b>Copia URL</b> (se ne vedi due, una è il «preflight»: hanno lo stesso link, va bene una qualsiasi).</li><li>Incollalo qui sopra e premi <b>Aggiungi</b>: non servono i cookie. Il link <b>scade</b>: avvia subito.</li>',
     'link.needcookie':'Per aggiungere una lezione Webex carica prima i cookie (qui sotto).',
     'webex.access':'🎥 Accesso Webex','webex.load':'Carica cookies',
     'webex.haspwd':'La lezione ha una password?','webex.pwdph':'Password del video',
@@ -595,6 +596,7 @@ var I18N = {
     'set.body':'La tua chiave API di Google Gemini, salvata in modo sicuro sul PC.',
     'set.keysaved':'Chiave salvata','set.keyph':'Incolla la nuova chiave…',
     'set.version':'Versione app','set.report':'Segnala un problema','set.updates':'Cerca aggiornamenti',
+    'set.donate':'☕ Fai una donazione',
     'set.fmtTitle':'Formato dei documenti','set.fmtTxt':'Testo',
     'set.fmtSub':'Per ogni lingua creo un file in ciascun formato spuntato. Vale per le prossime trascrizioni.',
     't.fmtOneTitle':'Serve almeno un formato','t.fmtOneDesc':'Spunta prima un altro formato, poi puoi togliere questo.',
@@ -709,7 +711,7 @@ var I18N = {
     'link.hint':'Webex, YouTube and other sites. We only download the audio.',
     'link.direct':'Direct Webex link: no cookies needed. It expires soon: start the transcription right away and don\'t share it (it contains your access).',
     'webex.guide2h':'Without the extension: copy the direct link',
-    'webex.steps2':'<li>Open the Webex <b>recording</b> in the browser (Chrome or Edge) and <b>sign in</b>.</li><li>Press <b>F12</b> and pick the <b>Network</b> tab.</li><li>Start the video and type <b>m3u8</b> in the <b>Filter</b> box.</li><li>On the <b>hls.m3u8</b> row: right click → <b>Copy</b> → <b>Copy URL</b>.</li><li>Paste it above and press <b>Add</b>: no cookies needed. The link <b>expires</b>: start right away.</li>',
+    'webex.steps2':'<li>Open the Webex <b>recording</b> in the browser (Chrome or Edge) and <b>sign in</b>.</li><li>Press <b>F12</b> and pick the <b>Network</b> tab.</li><li>Start the video and type <b>m3u8</b> in the <b>Filter</b> box.</li><li>On the <b>hls.m3u8</b> row: right click → <b>Copy</b> → <b>Copy URL</b> (if you see two, one is the «preflight»: same link, either one is fine).</li><li>Paste it above and press <b>Add</b>: no cookies needed. The link <b>expires</b>: start right away.</li>',
     'link.needcookie':'To add a Webex lecture, load the cookies first (below).',
     'webex.access':'🎥 Webex access','webex.load':'Load cookies',
     'webex.haspwd':'Does the lecture have a password?','webex.pwdph':'Video password',
@@ -741,6 +743,7 @@ var I18N = {
     'set.body':'Your Google Gemini API key, saved securely on your PC.',
     'set.keysaved':'Key saved','set.keyph':'Paste the new key…',
     'set.version':'App version','set.report':'Report a problem','set.updates':'Check for updates',
+    'set.donate':'☕ Donate',
     'set.fmtTitle':'Document format','set.fmtTxt':'Text',
     'set.fmtSub':'For each language I create one file in every checked format. Applies to the next transcriptions.',
     't.fmtOneTitle':'At least one format is needed','t.fmtOneDesc':'Check another format first, then you can untick this one.',
@@ -1015,8 +1018,12 @@ function apriImpostazioni(){
     info = info || {};
     document.getElementById('set-version').textContent = info.versione || '—';
     document.getElementById('btn-segnala').hidden = !info.segnalazione;
+    _urlDonazione = info.donazione || '';
+    document.getElementById('btn-dona').hidden = !_urlDonazione;
   });
 }
+var _urlDonazione = '';
+function faiDonazione(){ if(_urlDonazione) apriLink(_urlDonazione); }
 function chiudiImpostazioni(){ document.getElementById('settings').hidden = true; }
 /* --- Impostazioni: formati dei documenti (salvati da Python in preferenze.json) --- */
 function _caselleFormato(){ return Array.prototype.slice.call(document.querySelectorAll('#set-fmts input')); }

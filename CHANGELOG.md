@@ -22,6 +22,10 @@
 - Webex senza cookie: si può incollare il link diretto della registrazione (`hls.m3u8`, copiato dal
   browser con F12 → Rete). La guida è nell'app. Questi link scadono, quindi l'app li scarica subito
   all'avvio della coda; se è scaduto lo dice chiaramente.
+- Nelle Impostazioni c'è il tasto "☕ Fai una donazione" (PayPal), accanto a "Segnala un problema".
+- Colab: guida passo passo per i cookie di Webex (o per il link diretto), il file dei cookie viene
+  trovato con qualunque nome, e i link prendono il titolo del video (prima si chiamavano tutti
+  "Lecture" e i documenti si sovrascrivevano).
 
 ## 1.2.1
 - Risolto un problema per cui l'avviso di nuova versione poteva non comparire.

@@ -21,6 +21,8 @@ URL_FORM_SEGNALAZIONE = "https://docs.google.com/forms/d/e/1FAIpQLSfDRTTnAdLGVp0
 # Campo del form in cui pre-compilare la versione dell'app (dal "link precompilato"
 # di Google Form, es. "entry.123456789"). Vuoto = form aperto senza pre-compilare.
 FORM_CAMPO_VERSIONE = "entry.625561092"
+# Pulsante "Fai una donazione" nelle Impostazioni (si apre nel browser). Vuoto = pulsante nascosto.
+URL_DONAZIONE = "https://www.paypal.me/BisognoDiTantiSoldi"
 # Timeout del controllo aggiornamenti: corto perche' gira all'avvio (in un thread)
 # e un GitHub lento non deve mai far aspettare. In caso di scadenza: no-op silenzioso.
 TIMEOUT_CHECK_UPDATE_S = 5

@@ -516,10 +516,12 @@ class Api:
     # --- aggiornamenti / segnalazioni (Step 3) -----------------------------
     def info_app(self):
         """Dati per il pannello Impostazioni: versione e se il form di
-        segnalazione e' configurato (per mostrarne o no il pulsante)."""
+        segnalazione e' configurato (per mostrarne o no il pulsante), e il link
+        delle donazioni (vuoto = pulsante nascosto)."""
         return {
             "versione": config.VERSION,
             "segnalazione": bool(aggiornamenti.url_segnalazione()),
+            "donazione": (config.URL_DONAZIONE or "").strip(),
         }
 
     def leggi_formati(self):
