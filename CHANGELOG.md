@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.1 (in preparazione)
+- Risolto: se Gemini restituiva un carattere "invisibile" (di controllo), il Word non si creava e la
+  lezione finiva in errore proprio all'ultimo passo. Ora quei caratteri vengono tolti.
+- Risolto: quando il trascrittore di riserva (usato di rado, con una quota giornaliera piccola)
+  esauriva la sua quota, l'app fermava TUTTE le lezioni dicendo "trascrizioni finite per oggi",
+  anche se la quota principale era ancora piena. Ora si prosegue senza riserva.
+- Annullare una sola lezione mentre pulisce o traduce il testo ora è immediato (prima poteva
+  aspettare fino a ~40 secondi).
+- Webex, più riservatezza: il link diretto (che contiene il permesso d'accesso) non viene più salvato
+  nella cache, la password del video non compare più nei messaggi di debug, e il file dei cookie
+  dell'utente non viene più modificato (yt-dlp ne usa una copia temporanea, cancellata subito dopo).
+- Webex viene riconosciuto dal nome vero del sito: un indirizzo che contiene "webex.com" solo per
+  finta non viene più trattato come Webex.
+- Riga di comando: una prova su un pezzo di lezione (`--start`/`--minutes`) non viene più riusata
+  per la lezione intera.
+
 ## 1.3.0
 - Scegli il formato dei documenti nelle Impostazioni: Word, testo semplice (.txt) e/o Markdown (.md).
   Anche da riga di comando (`--formats docx txt md`) e su Colab (campo FORMATS).

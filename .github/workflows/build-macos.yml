@@ -133,18 +133,26 @@ jobs:
           name: Trascrivi-Lezioni-macOS
           path: Trascrivi-Lezioni-macOS.dmg
 
+      # Il tag arriva da fuori (campo scritto a mano nel lancio manuale): passa da `env`
+      # e NON e' incollato dentro lo script con ${{ }}, che lo farebbe eseguire come
+      # codice se contenesse caratteri speciali (script injection).
       - name: Ricava il tag della Release
         id: tag
+        env:
+          TAG_RELEASE: ${{ github.event.release.tag_name }}
+          TAG_MANUALE: ${{ github.event.inputs.tag }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          if [ -z "$TAG" ]; then TAG="${{ github.event.inputs.tag }}"; fi
+          TAG="${TAG_RELEASE:-$TAG_MANUALE}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Allega il .dmg alla Release
         if: steps.tag.outputs.tag != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${{ steps.tag.outputs.tag }}" "Trascrivi-Lezioni-macOS.dmg" --clobber
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          shasum -a 256 "Trascrivi-Lezioni-macOS.dmg"
+          gh release upload "$TAG" "Trascrivi-Lezioni-macOS.dmg" --clobber
 
   # Job di sola DIAGNOSTICA su macOS 15 (piu' vicino ai Mac nuovissimi, es. M4):
   # scarica il .dmg appena costruito, lo monta, mette all'app la QUARANTENA come

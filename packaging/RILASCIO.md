@@ -45,6 +45,12 @@ l'exe è quella messa al passo 1 (il build la legge da `config.VERSION`).
 
 Prova veloce: apri l'exe → **Impostazioni** → "Versione app" deve mostrare il numero nuovo.
 
+Calcola l'**impronta SHA256** dell'exe (serve al passo 4: chi scarica può controllare
+che il file sia identico al tuo):
+```
+Get-FileHash "packaging\dist\Trascrivi Lezioni.exe" -Algorithm SHA256
+```
+
 ## 4. Pubblica la Release su GitHub (dal sito, niente git)
 
 1. Vai su https://github.com/GiorgioAlo/lecture-transcriber/releases → **Draft a new release**.
@@ -52,6 +58,7 @@ Prova veloce: apri l'exe → **Impostazioni** → "Versione app" deve mostrare i
    - La `v` davanti ci vuole; il numero deve combaciare con `config.VERSION`.
 3. **Release title**: `Versione <NUMERO>`.
 4. **Describe this release**: scrivi cosa è cambiato (è il changelog che l'amico legge nel banner).
+   In fondo aggiungi la riga `SHA256 (Trascrivi.Lezioni.exe): <impronta del passo 3>`.
 5. **Attach binaries**: trascina `packaging\dist\Trascrivi Lezioni.exe` e aspetta il 100%.
 6. **Publish release**.
 
@@ -63,7 +70,8 @@ Prova veloce: apri l'exe → **Impostazioni** → "Versione app" deve mostrare i
 Appena la Release è **pubblicata**, GitHub fa partire il workflow **build-macos**
 (tab "Actions"): costruisce il `.dmg` su un Mac di GitHub e lo **allega da solo** alla
 stessa Release (`Trascrivi-Lezioni-macOS.dmg`). Ci mette ~10 minuti. Non serve fare nulla:
-basta controllare che finisca con la ✓ verde.
+basta controllare che finisca con la ✓ verde. L'impronta SHA256 del `.dmg` è stampata nel
+log del passo *"Allega il .dmg alla Release"*: aggiungila al testo della Release sotto quella dell'exe.
 
 > Se fallisce o va rifatto: tab Actions → **build-macos** → *Run workflow* → scrivi il tag
 > (es. `v1.3.0`): ricostruisce il `.dmg` e lo sostituisce nella Release.

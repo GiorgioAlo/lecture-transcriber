@@ -274,19 +274,28 @@ def _processa(client, testo, sorgente, destinazione, corso, reporter, avanzament
                  f"{config.WORKER_PARALLELI} in parallelo")
     risultati: list[tuple[int, str]] = []
     errori = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=config.WORKER_PARALLELI) as ex:
-        futs = [ex.submit(_elabora_blocco, client, i, len(blocchi), b, sorgente, destinazione, corso, reporter,
-                          grezzo_su_errore)
-                for i, b in enumerate(blocchi, 1)]
-        for n, f in enumerate(concurrent.futures.as_completed(futs), 1):
+    # Executor gestito A MANO, come in transcribe.trascrivi_chunks: il `with` all'uscita
+    # aspetta le chiamate in volo (fino a ~40 s l'una) e `as_completed` guarda l'annullo
+    # solo quando un blocco finisce → l'annullo di UNA lezione restava appeso. Qui ci si
+    # sveglia ogni secondo e, su annullo, si molla subito (le chiamate gia' partite
+    # finiscono in background; il loro risultato viene buttato).
+    ex = concurrent.futures.ThreadPoolExecutor(max_workers=config.WORKER_PARALLELI)
+    pending = {ex.submit(_elabora_blocco, client, i, len(blocchi), b, sorgente, destinazione, corso,
+                         reporter, grezzo_su_errore)
+               for i, b in enumerate(blocchi, 1)}
+    try:
+        while pending:
             if reporter.interrotto():
-                for fut in futs:
-                    fut.cancel()
                 raise Interrotto()
-            indice, testo_out, fallito = f.result()
-            errori += fallito
-            risultati.append((indice, testo_out))
-            avanzamento(n / max(1, len(blocchi)))
+            done, pending = concurrent.futures.wait(
+                pending, timeout=1.0, return_when=concurrent.futures.FIRST_COMPLETED)
+            for f in done:
+                indice, testo_out, fallito = f.result()
+                errori += fallito
+                risultati.append((indice, testo_out))
+                avanzamento(len(risultati) / max(1, len(blocchi)))
+    finally:
+        ex.shutdown(wait=False, cancel_futures=True)
     return "\n\n".join(t for _, t in sorted(risultati)), errori
 
 

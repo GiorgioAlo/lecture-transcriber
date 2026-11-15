@@ -32,7 +32,7 @@ from trascrittore import chiave as apikey
 from trascrittore import download as dl
 from trascrittore.audio import durata
 from trascrittore.errors import DownloadFallito, Messaggio
-from trascrittore.pipeline import Risultato
+from trascrittore.pipeline import Risultato, identita_job
 from trascrittore.progress import Reporter
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -121,7 +121,7 @@ class Api:
         self._in_corso = False        # True mentre un batch e in esecuzione
         self._worker = None           # il thread che sta lavorando
         self._cartella_batch = None   # cartella scelta a inizio batch: ci salvo da solo le lezioni finite
-        self._cookies_webex = None    # file cookies.txt per Webex, tenuto SOLO in RAM (sessione sensibile)
+        self._cookies_webex = None    # PERCORSO del cookies.txt per Webex (solo in memoria: il file resta dov'e')
         self._proc = None             # processo figlio che trascrive (lo si puo' uccidere per annullare)
         self._cancel_events = {}      # key lezione -> Event condiviso col figlio (annullo MIRATO cooperativo)
         self._lingua_ui = "it"        # lingua dell'interfaccia (la manda la pagina): serve ai dialoghi di sistema
@@ -247,7 +247,7 @@ class Api:
             self._dialogo_in_corso = False
 
     def carica_cookies(self):
-        """Apre il selettore per il file cookies.txt di Webex (lo tiene in RAM)."""
+        """Apre il selettore per il file cookies.txt di Webex (ne ricorda solo il percorso)."""
         if not self._prendi_dialogo():
             return {"ok": True}
         threading.Thread(target=self._apri_dialogo_cookies, daemon=True).start()
@@ -269,7 +269,9 @@ class Api:
                 return  # annullato
             ok, errore = dl.valida_cookies(str(path))
             if ok:
-                self._cookies_webex = str(path)   # solo in RAM, non lo copiamo/salviamo
+                # Solo il percorso, in memoria: non lo salviamo da nessuna parte. A ogni
+                # download yt-dlp ne riceve una copia temporanea (download._copia_cookies).
+                self._cookies_webex = str(path)
                 self._js("appCookies(" + json.dumps({"ok": True, "nome": Path(path).name}) + ")")
             else:
                 self._js("appCookies(" + json.dumps({"ok": False, "errore": _m_da(errore)},
@@ -640,7 +642,14 @@ class Api:
         """Salva un meta.json nella cartella di lavoro: serve a ripristinare la
         scheda 'completata' (nome vero + lingue) alla prossima apertura."""
         try:
-            meta = {"nome": ris.nome, "path": str(path), "lingue": list(lingue),
+            src = str(path)
+            if dl.e_webex_diretto(src):
+                # Il link diretto Webex porta DENTRO il permesso d'accesso (ticket + token):
+                # su disco va solo l'identita' della registrazione, mai il link. (Serve
+                # solo a evitare doppioni, e un link ricopiato e' comunque diverso.)
+                ident = identita_job(Job(url=src))
+                src = ident if ident.startswith("webex-registrazione:") else ""
+            meta = {"nome": ris.nome, "path": src, "lingue": list(lingue),
                     "documenti": [Path(d).name for d in ris.documenti]}
             (ris.work_dir / "meta.json").write_text(
                 json.dumps(meta, ensure_ascii=False), encoding="utf-8")
@@ -732,7 +741,9 @@ class Api:
                 return {"ok": False, "motivo": "in_corso"}
             self._in_corso = True
             self._annulla = False
-            print("[Python] avvia():", json.dumps(lavoro, ensure_ascii=False)[:300])
+            # Senza la password del video Webex (puo' finire in un terminale o in un log)
+            n = len(lavoro.get("lezioni", [])) if isinstance(lavoro, dict) else 0
+            print(f"[Python] avvia(): {n} lezioni")
             self._worker = threading.Thread(target=self._lavora_protetto, args=(lavoro,), daemon=True)
             self._worker.start()
         return {"ok": True}

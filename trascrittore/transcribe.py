@@ -17,6 +17,9 @@ flash-lite e' pero' un ASR stocastico: su qualche blocco puo' andare in RUNAWAY
   6. se tornano VUOTI (risposta completa, zero testo: nessuno parla, es. la pausa a
      registrazione accesa) → conferma con `config.TRANSCRIBE_MODEL`: se e' vuoto
      anche lui il pezzo si salta, altrimenti si tiene il suo testo.
+  7. se la riserva ha finito la SUA quota (o e' ritirata) → si prosegue senza:
+     pezzo vuoto saltato, runaway tenuto senza ripetizioni (`_senza_riserva`).
+     La coda NON si ferma: flash-lite ha ancora la sua quota.
 
 Ogni blocco trascritto viene salvato in cache: ripartendo si riusano i blocchi
 gia fatti. Il testo torna nella LINGUA PARLATA (nessuna traduzione qui).
@@ -34,7 +37,8 @@ from pathlib import Path
 from google.genai import types
 
 from . import audio, config, tempi, util
-from .errors import ContenutoBloccato, Interrotto, Messaggio, NessunParlato
+from .errors import (ContenutoBloccato, Interrotto, LimiteGiornaliero, Messaggio,
+                     ModelloNonDisponibile, NessunParlato)
 from .gemini import IMPOSTAZIONI_SICUREZZA, con_retry
 from .progress import Reporter
 
@@ -253,6 +257,31 @@ def _diagnosi(testo: str, finish: str, durata_sec: float) -> str:
 # dopo il primo rifiuto non glielo si manda piu'.
 _SENZA_THINKING: set[str] = set()
 
+# Modelli di riserva (TRANSCRIBE_MODEL) che in questa sessione hanno finito la quota del
+# giorno o risultano ritirati: dopo la prima volta non li si chiama piu' (vedi
+# _trascrivi_con_guardia). L'app fa girare ogni coda in un processo nuovo: si riazzera.
+_RISERVA_FUORI: set[str] = set()
+
+
+def _senza_riserva(runaway: list[str], durata_sec: float, descrizione: str,
+                   reporter: Reporter) -> tuple[str, str]:
+    """Il pezzo che avrebbe chiesto la riserva, quando la riserva non c'e'.
+
+    - Tutti i tentativi VUOTI: tre risposte vuote di flash-lite bastano per dire che
+      nessuno parla (la riserva serviva solo da conferma) → il pezzo si salta.
+    - Tentativi RUNAWAY: si tiene il migliore dopo aver tolto le ripetizioni (meglio
+      un testo un po' sporco che 10 minuti spariti). Se dopo il collasso sembra
+      ancora un runaway, al prossimo «Riprova» la cache lo ritrascrive da sola."""
+    if not runaway:
+        reporter.log(f"⏸️  [{descrizione}] nessun parlato in questo pezzo (pausa?): lo salto")
+        return "", config.ASR_MODEL
+    candidati = [_collassa_ripetizioni(t) for t in runaway]
+    buoni = [t for t in candidati if _diagnosi(t, "STOP", durata_sec) != "RUNAWAY"]
+    testo = max(buoni or candidati, key=lambda s: len(s.split()))
+    reporter.log(f"⚠️  [{descrizione}] tengo il tentativo migliore senza le ripetizioni: "
+                 "questo pezzo potrebbe contenere qualche errore")
+    return testo, config.ASR_MODEL + " (senza riserva)"
+
 
 def _rifiuta_thinking(e: Exception) -> bool:
     """400 INVALID_ARGUMENT sull'impostazione di ragionamento. Misurato il 2026-11-10:
@@ -334,6 +363,7 @@ def _trascrivi_con_guardia(client, chunk_path: Path, durata_sec: float,
     f = _carica_file(client, chunk_path, reporter)
     try:
         tentativi_ok: list[str] = []
+        runaway: list[str] = []         # tentativi scartati: servono se la riserva non c'e'
         vuoti = 0
         for t in range(1, config.ASR_MAX_TENTATIVI + 1):
             if reporter.interrotto():
@@ -350,6 +380,7 @@ def _trascrivi_con_guardia(client, chunk_path: Path, durata_sec: float,
             if d == "RUNAWAY":
                 reporter.log(f"⚠️  [{descrizione}] blocco sospetto (runaway), ritento "
                              f"({t}/{config.ASR_MAX_TENTATIVI})")
+                runaway.append(testo)
                 continue
             tentativi_ok.append(testo)
             if d == "OK":
@@ -362,13 +393,24 @@ def _trascrivi_con_guardia(client, chunk_path: Path, durata_sec: float,
         # (sulla pausa vera del 2026-11-11 rispondeva vuoto anche lui), cosi' un vuoto
         # per caso di flash-lite non fa sparire 10 minuti di lezione. 1 richiesta in
         # piu', solo sui pezzi vuoti.
+        riserva = config.TRANSCRIBE_MODEL
+        if riserva in _RISERVA_FUORI:
+            return _senza_riserva(runaway, durata_sec, descrizione, reporter)
         if vuoti == config.ASR_MAX_TENTATIVI:
             reporter.log(f"🔎 [{descrizione}] nessun parlato per {config.ASR_MODEL}: "
-                         f"controllo con {config.TRANSCRIBE_MODEL}")
+                         f"controllo con {riserva}")
         else:
-            reporter.log(f"↩️  [{descrizione}] uso {config.TRANSCRIBE_MODEL} (fallback)")
-        testo, _fin = _genera(client, config.TRANSCRIBE_MODEL, f, {}, reporter,
-                              descrizione + " (fallback)")
+            reporter.log(f"↩️  [{descrizione}] uso {riserva} (fallback)")
+        try:
+            testo, _fin = _genera(client, riserva, f, {}, reporter, descrizione + " (fallback)")
+        except (LimiteGiornaliero, ModelloNonDisponibile) as e:
+            # La quota (o il ritiro) e' quella del SOLO modello di riserva: flash-lite
+            # ha ancora la sua. Senza questo, LimiteGiornaliero risaliva fino alla coda,
+            # che fermava TUTTE le lezioni con "trascrizioni finite per oggi".
+            _RISERVA_FUORI.add(riserva)
+            perche = "ha finito la quota di oggi" if isinstance(e, LimiteGiornaliero) else "non è disponibile"
+            reporter.log(f"ℹ️  [{descrizione}] il modello di riserva {riserva} {perche}: proseguo senza")
+            return _senza_riserva(runaway, durata_sec, descrizione, reporter)
         if _sospetto_loop(testo, durata_sec):
             testo = _collassa_ripetizioni(testo)
         testo = _pulisci_artefatti(testo)

@@ -1143,13 +1143,20 @@ function _chiudiMenuLingue(){ var m=document.getElementById('menu'); if(m) m.hid
   _renderChips();
 })();
 var _cookiesOk = false;
+/* link di webex.com o di un suo sottodominio: si guarda l'HOST, non una sottostringa
+   ('webex.com.altrosito.io' NON e' Webex). Stessa regola di download.e_webex in Python */
+function _isWebex(v){
+  var h;
+  try{ h = new URL(String(v||'').trim()).hostname.toLowerCase().replace(/\.$/, ''); }catch(e){ return false; }
+  return h === 'webex.com' || /\.webex\.com$/.test(h);
+}
 /* link DIRETTO al flusso Webex (hls.m3u8, copiato da F12 → Rete): il permesso e' nel
    link, quindi NIENTE cookie (stessa regola di download.e_webex_diretto in Python) */
 function _webexDiretto(v){
-  return /webex\.com/i.test(v) && (/\/nbr\/MultiThreadDownloadServlet\//i.test(v) || /\.m3u8(\?|#|$)/i.test(v));
+  return _isWebex(v) && (/\/nbr\/MultiThreadDownloadServlet\//i.test(v) || /\.m3u8(\?|#|$)/i.test(v));
 }
 /* Webex che ha bisogno dei cookie = Webex ma non link diretto */
-function _webexCookie(v){ return /webex\.com/i.test(v) && !_webexDiretto(v); }
+function _webexCookie(v){ return _isWebex(v) && !_webexDiretto(v); }
 function onLinkInput(v){
   var conCookie = _webexCookie(v), diretto = _webexDiretto(v);
   document.getElementById('webex-cookie').hidden = !conCookie;
@@ -1250,7 +1257,7 @@ function appFileScelti(files){ (files||[]).forEach(function(f){ addItem(f.nome, 
 function addLink(){
   var el = document.getElementById('link-in'); var v = el.value.trim();
   if(!v){ el.focus(); return; }
-  var isWebex = /webex\.com/i.test(v);
+  var isWebex = _isWebex(v);
   if(_webexCookie(v) && !_cookiesOk){ toast('warn',t('t.needCookiesTitle'),t('t.needCookiesDesc')); return; }
   var pwd = _webexCookie(v) ? (document.getElementById('webex-pwd')||{}).value : '';
   pwd = (pwd||'').trim();

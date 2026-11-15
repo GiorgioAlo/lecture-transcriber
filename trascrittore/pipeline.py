@@ -37,7 +37,18 @@ def identita_job(job: "Job") -> str:
 
     E' il percorso del file, oppure l'url del link, oppure (fallback) il nome.
     Serve a dare a ogni lezione una cartella di lavoro diversa anche quando due
-    sorgenti hanno lo stesso nome (es. due 'lezione.mp4' in cartelle diverse)."""
+    sorgenti hanno lo stesso nome (es. due 'lezione.mp4' in cartelle diverse).
+
+    Uno SPEZZONE (CLI --start/--minutes) ha un'identita' sua: senza, la prova su 5
+    minuti veniva poi riusata come trascrizione della lezione intera. La lezione
+    intera (inizio 0, minuti None, come sempre nell'app) resta com'era: cache invariata."""
+    base = _identita_sorgente(job)
+    if (job.inizio or 0) > 0 or job.minuti is not None:
+        base += f"|spezzone:{float(job.inizio or 0):g}+{'' if job.minuti is None else f'{float(job.minuti):g}'}"
+    return base
+
+
+def _identita_sorgente(job: "Job") -> str:
     if job.sorgente is not None:
         return str(job.sorgente)
     if job.url:
@@ -73,7 +84,7 @@ class Job:
     minuti: float | None = None        # durata da usare (None = tutta)
     testo: Path | None = None          # trascrizione gia pronta: salta FASE 0-1
     url: str | None = None             # link da scaricare (YouTube, Webex...) invece di un file
-    cookies: str | None = None         # file cookies.txt (per Webex), tenuto solo in RAM
+    cookies: str | None = None         # percorso del cookies.txt (per Webex); yt-dlp ne usa una copia
     password: str | None = None        # password del video (Webex), facoltativa
     formati: list[str] = field(default_factory=lambda: ["docx"])   # formati dei documenti: docx/txt/md
 

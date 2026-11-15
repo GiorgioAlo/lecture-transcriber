@@ -11,12 +11,14 @@ password del video, OPPURE il link diretto al flusso (`hls.m3u8`, vedi
 from __future__ import annotations
 
 import base64
+import contextlib
 import os
 import queue
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 from pathlib import Path
 from urllib.parse import urlparse
@@ -58,10 +60,13 @@ def _scaricati_completi(work_dir: Path) -> list[Path]:
 
 
 def e_webex(url: str) -> bool:
+    """True se il link e' DAVVERO di webex.com (o di un suo sottodominio). Si guarda il
+    nome dell'host, non una sottostringa: 'webex.com.altrosito.io' NON e' Webex."""
     try:
-        return "webex.com" in (urlparse(url).netloc or "").lower()
+        host = (urlparse(url).hostname or "").lower().rstrip(".")
     except Exception:
-        return "webex.com" in (url or "").lower()
+        return False
+    return host == "webex.com" or host.endswith(".webex.com")
 
 
 def e_webex_diretto(url: str) -> bool:
@@ -190,6 +195,36 @@ def aggiorna_ytdlp(reporter: Reporter | None = None, timeout: int = 120) -> bool
         return False
 
 
+@contextlib.contextmanager
+def _copia_cookies(cookies: str | None):
+    """Passa a yt-dlp una COPIA temporanea del file dei cookie, cancellata subito dopo.
+
+    yt-dlp con `--cookies` RISCRIVE il file alla fine: senza la copia toccherebbe il
+    file dell'utente. La copia sta nella cartella temporanea del sistema (su Mac/Linux
+    leggibile solo dall'utente). Se la copia non riesce si usa il file originale:
+    l'eventuale errore lo spiega yt-dlp."""
+    if not cookies:
+        yield None
+        return
+    tmp = None
+    try:
+        fd, tmp = tempfile.mkstemp(prefix="trascrittore_cookies_", suffix=".txt")
+        os.close(fd)
+        shutil.copyfile(cookies, tmp)
+    except Exception:
+        if tmp:
+            Path(tmp).unlink(missing_ok=True)
+        tmp = None
+    try:
+        yield tmp or cookies
+    finally:
+        if tmp:
+            try:
+                Path(tmp).unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
 def _base_cmd(url: str, cookies: str | None, password: str | None) -> list[str]:
     # `--no-playlist`: se l'URL contiene `&list=...` (tipico del link che Chrome copia
     # dalla barra, spesso un Mix/Radio `RD...` praticamente infinito), yt-dlp di default
@@ -213,11 +248,12 @@ def info(url: str, cookies: str | None = None) -> dict:
     """Titolo + durata (secondi) SENZA scaricare. Campi vuoti se non recuperabili."""
     if not _url_valido(url):
         return {"titolo": "", "durata": None}
-    cmd = _base_cmd(url, cookies, None) + ["--skip-download", "--print",
-                                           "%(title)s\t%(duration)s", "--", url]
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=60,
-                             creationflags=_NO_WINDOW)
+        with _copia_cookies(cookies) as ck:
+            cmd = _base_cmd(url, ck, None) + ["--skip-download", "--print",
+                                              "%(title)s\t%(duration)s", "--", url]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=60,
+                                 creationflags=_NO_WINDOW)
         if res.returncode == 0 and res.stdout.strip():
             titolo, _, dur = res.stdout.strip().partition("\t")
             dur = dur.strip()
@@ -249,6 +285,11 @@ def scarica(
         reporter.log("Audio del link gia' scaricato, lo riuso")
         return esistenti[0]
 
+    with _copia_cookies(cookies) as ck:
+        return _scarica_con_riprova(url, work_dir, ck, password, reporter, avanzamento)
+
+
+def _scarica_con_riprova(url, work_dir, cookies, password, reporter, avanzamento) -> Path:
     try:
         return _esegui_download(url, work_dir, cookies, password, reporter, avanzamento)
     except DownloadFallito:

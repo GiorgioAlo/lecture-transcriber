@@ -883,5 +883,118 @@ try:
 finally:
     download._esegui_download, download.aggiorna_ytdlp = _old_esegui, _old_agg
 
+print("\n#  revisione esterna 2026-11-15: caratteri invisibili nei documenti")
+_sporco = "Prima frase\x00 con un nul.\x0b Seconda\x1f frase.\n\nTerza \ufffefrase."
+_cr = documents.genera(_sporco, Path(_tf.mkdtemp()) / "Sporco_IT", "Titolo\x07", "nota\x00",
+                       ["docx", "txt", "md"], "it")
+check("caratteri di controllo -> i 3 documenti escono (niente crash del Word)",
+      len(_cr) == 3 and all(p.exists() for p in _cr))
+_txt_s = _cr[1].read_text(encoding="utf-8")
+check("...e i caratteri invalidi spariscono, il testo resta",
+      "\x00" not in _txt_s and "\x0b" not in _txt_s and "\ufffe" not in _txt_s
+      and "Seconda frase" in _txt_s and "Terza frase" in _txt_s)
+
+print("\n#  revisione esterna: modello di riserva senza quota NON ferma la coda")
+from trascrittore.errors import LimiteGiornaliero, ModelloNonDisponibile
+_old_gen, _old_carica = transcribe._genera, transcribe._carica_file
+transcribe._carica_file = lambda c, p, r: type("F", (), {"name": "files/x"})()
+def _gen_riserva(risposte_flash, errore):
+    chiamate = []
+    def gen(client, model, f, extra, rep, descr):
+        chiamate.append(model)
+        if model == config.TRANSCRIBE_MODEL:
+            raise errore
+        return risposte_flash[len(chiamate) - 1]
+    return gen, chiamate
+try:
+    transcribe._RISERVA_FUORI.clear()
+    transcribe._genera, _ch = _gen_riserva([("", "STOP")] * 3, LimiteGiornaliero("finita"))
+    _rp = _RepP()
+    _res = transcribe._trascrivi_con_guardia(_CliDel(), Path("x.m4a"), 600, "t", _rp)
+    check("riserva senza quota + 3 vuoti -> pezzo saltato, NESSUN errore", _res[0] == "")
+    check("...e il registro spiega che si prosegue senza riserva",
+          any("proseguo senza" in r for r in _rp.righe))
+    check("...e la riserva viene segnata come fuori uso", config.TRANSCRIBE_MODEL in transcribe._RISERVA_FUORI)
+    transcribe._genera, _ch = _gen_riserva([("", "STOP")] * 3, AssertionError("non doveva chiamarla"))
+    _res = transcribe._trascrivi_con_guardia(_CliDel(), Path("x.m4a"), 600, "t", _RepP())
+    check("pezzo successivo: la riserva fuori uso NON viene piu' chiamata",
+          _res[0] == "" and config.TRANSCRIBE_MODEL not in _ch)
+    transcribe._RISERVA_FUORI.clear()
+    transcribe._genera, _ch = _gen_riserva([(loopato, "MAX_TOKENS")] * 3,
+                                           ModelloNonDisponibile(config.TRANSCRIBE_MODEL, None))
+    _res = transcribe._trascrivi_con_guardia(_CliDel(), Path("x.m4a"), 600, "t", _RepP())
+    check("riserva ritirata + 3 runaway -> si tiene il testo SENZA le ripetizioni",
+          "Frase numero 39 del corpo" in _res[0]
+          and _res[0].count("Questo e il finale importante della lezione odierna") <= 3)
+finally:
+    transcribe._genera, transcribe._carica_file = _old_gen, _old_carica
+    transcribe._RISERVA_FUORI.clear()
+
+print("\n#  revisione esterna: annullo di una lezione nella fase testo e' veloce")
+import time as _time
+from trascrittore.errors import Interrotto as _Interrotto
+_old_el = textproc._elabora_blocco
+def _blocco_lento(client, i, tot, b, *a):
+    _time.sleep(4)
+    return i, b, False
+textproc._elabora_blocco = _blocco_lento
+class _RepAnn(_RepP):
+    def __init__(self):
+        super().__init__(); self.t0 = _time.time()
+    def interrotto(self): return _time.time() - self.t0 > 0.5
+try:
+    _t0 = _time.time()
+    try:
+        textproc._processa(None, "Testo di prova.", "it", "it", "", _RepAnn(), lambda f: None)
+        check("annullo nella fase testo -> Interrotto", False)
+    except _Interrotto:
+        check("annullo nella fase testo -> Interrotto", True)
+    _dt = _time.time() - _t0
+    print(f"    annullo in {_dt:.1f}s (la chiamata finta dura 4s)")
+    check("...entro ~2 s, senza aspettare la chiamata in corso", _dt < 2.5)
+    _r = textproc._processa(None, "Testo di prova.", "it", "it", "", _RepP(), lambda f: None)
+    check("senza annullo il risultato resta quello di prima", _r == ("Testo di prova.", 0))
+finally:
+    textproc._elabora_blocco = _old_el
+
+print("\n#  revisione esterna: Webex riconosciuto dall'HOST, non da una sottostringa")
+for _u, _atteso in (("https://politecnicomilano.webex.com/recordingservice/x", True),
+                    ("https://webex.com/x", True),
+                    ("https://WEBEX.COM./x", True),
+                    ("https://webex.com.altrosito.io/x", False),
+                    ("https://altrowebex.com/x", False),
+                    ("https://esempio.io/?q=webex.com", False),
+                    ("non un link", False)):
+    check(f"e_webex({_u!r}) == {_atteso}", download.e_webex(_u) is _atteso)
+
+print("\n#  revisione esterna: cookie passati a yt-dlp come COPIA temporanea")
+_cdir = Path(_tf.mkdtemp())
+_orig = _cdir / "cookies.txt"
+_orig.write_text("# Netscape HTTP Cookie File\n.webex.com\tTRUE\t/\tTRUE\t0\tk\tv\n", encoding="utf-8")
+with download._copia_cookies(str(_orig)) as _ck:
+    _copia = Path(_ck)
+    check("la copia e' un file DIVERSO dall'originale, con lo stesso contenuto",
+          _copia != _orig and _copia.read_text(encoding="utf-8") == _orig.read_text(encoding="utf-8"))
+    _copia.write_text("riscritto da yt-dlp", encoding="utf-8")
+check("...a fine download la copia viene cancellata", not _copia.exists())
+check("...e l'originale dell'utente resta intatto", _orig.read_text(encoding="utf-8").startswith("# Netscape"))
+with download._copia_cookies(None) as _ck:
+    check("senza cookie -> niente copia", _ck is None)
+with download._copia_cookies(str(_cdir / "sparito.txt")) as _ck:
+    check("file sparito -> si passa il percorso originale (l'errore lo spiega yt-dlp)",
+          _ck == str(_cdir / "sparito.txt"))
+
+print("\n#  revisione esterna: lo spezzone della CLI ha una cache sua")
+_intera = Job(sorgente=Path(r"C:\Lezioni\lez.mp4"), nome="lez")
+_pezzo = Job(sorgente=Path(r"C:\Lezioni\lez.mp4"), nome="lez", inizio=10, minuti=5)
+check("lezione intera: identita' invariata (cache vecchie ancora valide)",
+      identita_job(_intera) == str(Path(r"C:\Lezioni\lez.mp4")))
+check("spezzone -> cartella DIVERSA dalla lezione intera",
+      cartella_lavoro(base, "lez", identita_job(_pezzo)) != cartella_lavoro(base, "lez", identita_job(_intera)))
+check("spezzoni diversi -> cartelle diverse",
+      identita_job(_pezzo) != identita_job(Job(sorgente=Path(r"C:\Lezioni\lez.mp4"), nome="lez", inizio=10, minuti=6)))
+check("stesso spezzone -> stessa cartella (ripresa)",
+      identita_job(_pezzo) == identita_job(Job(sorgente=Path(r"C:\Lezioni\lez.mp4"), nome="lez", inizio=10.0, minuti=5.0)))
+
 print(f"\n==== RISULTATO: {ok} PASS, {ko} FAIL ====")
 raise SystemExit(1 if ko else 0)

@@ -22,6 +22,15 @@ from docx.shared import Pt, RGBColor
 from . import config, util
 
 TIMESTAMP_RE = re.compile(r"\[(\d{2}:\d{2}:\d{2})\]")
+# Caratteri che un file XML (e quindi il Word) non puo' contenere: quelli di controllo
+# (tranne tab e a capo), i "non caratteri" FFFE/FFFF e i surrogati spaiati. Se Gemini
+# ne restituisce uno, python-docx rifiuta il testo ("All strings must be XML
+# compatible") e la lezione fallirebbe all'ultima fase.
+_NON_XML_RE = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f￾￿\ud800-\udfff]")
+
+
+def _togli_caratteri_invalidi(testo: str) -> str:
+    return _NON_XML_RE.sub("", testo or "")
 ALLCAPS_RE = re.compile(r"^[A-ZÀ-Ü0-9\s\-–—:]{3,}$")
 
 
@@ -424,5 +433,6 @@ def genera(testo: str, base: Path, titolo: str, note: str, formati,
     """Scrive un documento per ogni formato scelto. `base` = percorso SENZA
     estensione (es. .../Lezione_IT). `lingua` = codice della lingua del documento
     (decide la lingua delle note). Ritorna i percorsi creati, in ordine."""
+    testo, titolo, note = (_togli_caratteri_invalidi(s) for s in (testo, titolo, note))
     return [GENERATORI[f](testo, percorso_documento(base, f), titolo, note, lingua)
             for f in normalizza_formati(formati)]
